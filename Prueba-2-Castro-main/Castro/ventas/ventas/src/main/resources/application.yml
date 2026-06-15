@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: ventas-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/db_ventas?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+    username: root
+    password: ""
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+
+server:
+  port: 8088
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+
+  swagger-ui:
+    enabled: true
+    path: /doc/swagger-ui/index.html
+
+logging:
+  level:
+    org:
+      springframework:
+        web: INFO
+    com:
+      vetnova: DEBUG
+
+inventario:
+  url: http://localhost:8087/api/v1/movimientos
