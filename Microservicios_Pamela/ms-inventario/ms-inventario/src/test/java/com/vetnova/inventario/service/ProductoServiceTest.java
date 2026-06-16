@@ -163,4 +163,19 @@ public class ProductoServiceTest {
         assertEquals(1, resultado.size());
         assertEquals("Antibiótico", resultado.get(0).getNombre());
     }
+    @Test
+void buscarPorId_cuandoNoExiste_deberiaLanzarExcepcion() {
+
+    when(productoRepository.findById(99L))
+            .thenReturn(Optional.empty());
+
+    RuntimeException exception = assertThrows(
+            RuntimeException.class,
+            () -> productoService.buscarPorId(99L)
+    );
+
+    assertEquals("Producto no encontrado con ID: 99", exception.getMessage());
+
+    verify(productoRepository).findById(99L);
+}
 }
