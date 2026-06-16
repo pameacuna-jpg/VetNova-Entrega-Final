@@ -37,3 +37,6 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
+
+notificaciones:
+  url: http://localhost:8089/api/v1/notificaciones

@@ -8,10 +8,13 @@ import com.vetnova.clientes.model.HistorialCliente;
 import com.vetnova.clientes.repository.ClienteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -23,6 +26,10 @@ import java.util.stream.Collectors;
 public class ClienteServiceImpl implements IClienteService {
 
     private final ClienteRepository clienteRepository;
+    private final RestTemplate restTemplate;
+
+    @Value("${notificaciones.url}")
+    private String notificacionesUrl;
 
     @Override
     @Transactional
@@ -43,15 +50,14 @@ public class ClienteServiceImpl implements IClienteService {
                 .fechaCreacion(LocalDateTime.now())
                 .build();
 
-        // Inicialización obligatoria del Historial por Composición UML (1 posee 1)
         HistorialCliente historialInicial = HistorialCliente.builder()
                 .totalCompras(0)
                 .totalAtenciones(0)
                 .fechaUltimaAtencion(null)
                 .build();
+
         cliente.asignarHistorial(historialInicial);
 
-        // Procesar contactos de emergencia si se envían en la petición (1 tiene 0..*)
         if (request.getContactos() != null) {
             request.getContactos().forEach(c -> cliente.agregarContacto(
                     ContactoEmergencia.builder()
@@ -62,13 +68,18 @@ public class ClienteServiceImpl implements IClienteService {
             ));
         }
 
-        return mapToResponse(clienteRepository.save(cliente));
+        Cliente clienteGuardado = clienteRepository.save(cliente);
+
+        enviarNotificacionClienteCreado(clienteGuardado);
+
+        return mapToResponse(clienteGuardado);
     }
 
     @Override
     @Transactional
     public ClienteResponseDTO actualizarDatos(Long id, ClienteRequestDTO request) {
         log.info("Actualizando datos para cliente ID: {}", id);
+
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
@@ -85,9 +96,11 @@ public class ClienteServiceImpl implements IClienteService {
     @Transactional(readOnly = true)
     public Page<ClienteResponseDTO> buscarClientes(String textoBusqueda, Pageable pageable) {
         log.info("Buscando clientes con filtro: '{}'", textoBusqueda);
+
         if (textoBusqueda == null || textoBusqueda.trim().length() < 3) {
             throw new IllegalArgumentException("La búsqueda requiere un mínimo de 3 caracteres");
         }
+
         return clienteRepository.buscarPorFiltros(textoBusqueda, pageable).map(this::mapToResponse);
     }
 
@@ -96,6 +109,7 @@ public class ClienteServiceImpl implements IClienteService {
     public ClienteResponseDTO obtenerDetalleCliente(Long id) {
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
+
         return mapToResponse(cliente);
     }
 
@@ -103,10 +117,12 @@ public class ClienteServiceImpl implements IClienteService {
     @Transactional
     public void eliminar(Long id) {
         log.info("Procesando baja del cliente con ID: {}", id);
+
         Cliente cliente = clienteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
         String codigoUnico = UUID.randomUUID().toString().substring(0, 8);
+
         cliente.setNombre("ANON_" + codigoUnico);
         cliente.setRut("ANON_" + codigoUnico);
         cliente.setTelefono("+000000000");
@@ -116,11 +132,31 @@ public class ClienteServiceImpl implements IClienteService {
         cliente.setFechaUltimaModificacion(LocalDateTime.now());
 
         clienteRepository.save(cliente);
+
         log.info("Cliente ID: {} dado de baja de forma conforme a políticas de privacidad.", id);
+    }
+
+    private void enviarNotificacionClienteCreado(Cliente cliente) {
+        try {
+            NotificacionRequestDTO notificacion = new NotificacionRequestDTO();
+            notificacion.setDestinatario(cliente.getEmail());
+            notificacion.setMensaje("Nuevo cliente registrado en VetNova: " + cliente.getNombre());
+            notificacion.setTipo("CLIENTE");
+            notificacion.setCanal("EMAIL");
+            notificacion.setPrioridad("MEDIA");
+
+            restTemplate.postForObject(notificacionesUrl, notificacion, Void.class);
+
+            log.info("Notificación enviada por registro de cliente ID: {}", cliente.getIdCliente());
+
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificación de cliente creado: {}", e.getMessage());
+        }
     }
 
     private ClienteResponseDTO mapToResponse(Cliente cliente) {
         HistorialResumenDTO historialDTO = null;
+
         if (cliente.getHistorialCliente() != null) {
             historialDTO = HistorialResumenDTO.builder()
                     .idHistorial(cliente.getHistorialCliente().getIdHistorial())
@@ -139,7 +175,7 @@ public class ClienteServiceImpl implements IClienteService {
                 .direccion(cliente.getDireccion())
                 .estado(cliente.getEstado())
                 .fechaCreacion(cliente.getFechaCreacion())
-                .contactos(cliente.getContactosEmergencia() != null ? 
+                .contactos(cliente.getContactosEmergencia() != null ?
                         cliente.getContactosEmergencia().stream()
                                 .map(c -> ContactoEmergenciaDTO.builder()
                                         .nombre(c.getNombre())

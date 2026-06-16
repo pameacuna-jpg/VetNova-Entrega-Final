@@ -6,10 +6,13 @@ import com.vetnova.mascotas.model.*;
 import com.vetnova.mascotas.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
@@ -23,6 +26,10 @@ public class MascotaServiceImpl implements IMascotaService {
     private final MascotaRepository mascotaRepository;
     private final EspecieRepository especieRepository;
     private final TransferenciaRepository transferenciaRepository;
+    private final RestTemplate restTemplate;
+
+    @Value("${notificaciones.url}")
+    private String notificacionesUrl;
 
     @Override
     @Transactional
@@ -43,11 +50,9 @@ public class MascotaServiceImpl implements IMascotaService {
                 .estado("ACTIVO")
                 .build();
 
-        // Generar Historial Clínico con número correlativo único (VHC-XXXX)
         long correlativo = mascotaRepository.count() + 1;
         String nroHistoria = String.format("VHC-%05d", correlativo);
 
-        // Se usa Objects.requireNonNullElse para limpiar advertencias de unboxing y nulos
         HistorialMascota historial = HistorialMascota.builder()
                 .numeroHistoriaClinica(nroHistoria)
                 .resumenClinico("Apertura de expediente clínico.")
@@ -59,13 +64,18 @@ public class MascotaServiceImpl implements IMascotaService {
 
         mascota.asignarHistorial(historial);
 
-        return mapToResponse(mascotaRepository.save(mascota));
+        Mascota mascotaGuardada = mascotaRepository.save(mascota);
+
+        enviarNotificacionMascotaRegistrada(mascotaGuardada);
+
+        return mapToResponse(mascotaGuardada);
     }
 
     @Override
     @Transactional
     public MascotaResponseDTO actualizar(Long id, MascotaRequestDTO request) {
         log.info("Actualizando datos de la mascota con ID: {}", id);
+
         Mascota mascota = mascotaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
 
@@ -80,7 +90,6 @@ public class MascotaServiceImpl implements IMascotaService {
         mascota.setNumeroMicrochip(request.getNumeroMicrochip());
 
         if (mascota.getHistorialMascota() != null) {
-            // Se aplica Objects.requireNonNullElse aquí también para limpiar advertencias amarillas
             mascota.getHistorialMascota().setUltimoPeso(Objects.requireNonNullElse(request.getUltimoPeso(), 0.0));
             mascota.getHistorialMascota().setEstaEsterilizado(Objects.requireNonNullElse(request.getEstaEsterilizado(), false));
             mascota.getHistorialMascota().setAlergiasCriticas(request.getAlergiasCriticas());
@@ -94,6 +103,7 @@ public class MascotaServiceImpl implements IMascotaService {
     public MascotaResponseDTO obtenerPorId(Long id) {
         Mascota mascota = mascotaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
+
         return mapToResponse(mascota);
     }
 
@@ -108,12 +118,12 @@ public class MascotaServiceImpl implements IMascotaService {
     @Transactional
     public void transferirPropietario(Long idMascota, TransferenciaRequestDTO request) {
         log.info("HU-MA03: Procesando transferencia de titularidad de la mascota ID: {}", idMascota);
+
         Mascota mascota = mascotaRepository.findById(idMascota)
                 .orElseThrow(() -> new ResourceNotFoundException("Mascota no encontrada"));
 
         Long propietarioAnterior = mascota.getIdCliente();
-        
-        // Registrar la auditoría histórica del cambio de dueño
+
         TransferenciaPropietario historialCambio = TransferenciaPropietario.builder()
                 .idMascota(idMascota)
                 .idClienteAnterior(propietarioAnterior)
@@ -123,9 +133,11 @@ public class MascotaServiceImpl implements IMascotaService {
 
         transferenciaRepository.save(historialCambio);
 
-        // Modificar el dueño actual en la mascota
         mascota.setIdCliente(request.getIdNuevoCliente());
-        mascotaRepository.save(mascota);
+        Mascota mascotaGuardada = mascotaRepository.save(mascota);
+
+        enviarNotificacionTransferencia(mascotaGuardada, propietarioAnterior, request.getIdNuevoCliente());
+
         log.info("Traspaso finalizado con éxito. Nuevo propietario: {}", request.getIdNuevoCliente());
     }
 
@@ -133,23 +145,66 @@ public class MascotaServiceImpl implements IMascotaService {
     @Transactional
     public void actualizarEstadoVital(Long idMascota, String nuevoEstado) {
         log.info("HU-MA06: Cambiando estado de permanencia biológica a: {}", nuevoEstado);
+
         Mascota mascota = mascotaRepository.findById(idMascota)
                 .orElseThrow(() -> new ResourceNotFoundException("Mascota no encontrada"));
 
         mascota.setEstado(nuevoEstado.toUpperCase());
-        
+
         if (nuevoEstado.equalsIgnoreCase("FALLECIDO") || nuevoEstado.equalsIgnoreCase("EXTRAVIADO")) {
             log.info("Desactivando triggers y cancelando agendas futuras para el paciente por estado sensible.");
         }
-        
+
         mascotaRepository.save(mascota);
+    }
+
+    private void enviarNotificacionMascotaRegistrada(Mascota mascota) {
+        try {
+            NotificacionRequestDTO notificacion = new NotificacionRequestDTO();
+            notificacion.setDestinatario("cliente-" + mascota.getIdCliente() + "@vetnova.internal");
+            notificacion.setMensaje("Mascota registrada en VetNova: " + mascota.getNombre());
+            notificacion.setTipo("MASCOTA");
+            notificacion.setCanal("EMAIL");
+            notificacion.setPrioridad("MEDIA");
+
+            restTemplate.postForObject(notificacionesUrl, notificacion, Void.class);
+
+            log.info("Notificación enviada por registro de mascota ID: {}", mascota.getIdMascota());
+
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificación de mascota registrada: {}", e.getMessage());
+        }
+    }
+
+    private void enviarNotificacionTransferencia(Mascota mascota, Long propietarioAnterior, Long propietarioNuevo) {
+        try {
+            NotificacionRequestDTO notificacion = new NotificacionRequestDTO();
+            notificacion.setDestinatario("cliente-" + propietarioNuevo + "@vetnova.internal");
+            notificacion.setMensaje("La mascota " + mascota.getNombre()
+                    + " fue transferida desde el cliente ID "
+                    + propietarioAnterior
+                    + " al cliente ID "
+                    + propietarioNuevo);
+            notificacion.setTipo("TRANSFERENCIA_MASCOTA");
+            notificacion.setCanal("EMAIL");
+            notificacion.setPrioridad("ALTA");
+
+            restTemplate.postForObject(notificacionesUrl, notificacion, Void.class);
+
+            log.info("Notificación enviada por transferencia de mascota ID: {}", mascota.getIdMascota());
+
+        } catch (Exception e) {
+            log.warn("No se pudo enviar notificación de transferencia de mascota: {}", e.getMessage());
+        }
     }
 
     private MascotaResponseDTO mapToResponse(Mascota m) {
         String edadTexto = "No especificada";
+
         if (m.getFechaNacimiento() != null) {
             Period periodo = Period.between(m.getFechaNacimiento(), LocalDate.now());
-            edadTexto = String.format("%d Años, %d Meses y %d Días", periodo.getYears(), periodo.getMonths(), periodo.getDays());
+            edadTexto = String.format("%d Años, %d Meses y %d Días",
+                    periodo.getYears(), periodo.getMonths(), periodo.getDays());
         }
 
         HistorialMascota hm = m.getHistorialMascota();
@@ -161,11 +216,10 @@ public class MascotaServiceImpl implements IMascotaService {
                 .raza(m.getRaza())
                 .sexo(m.getSexo())
                 .fechaNacimiento(m.getFechaNacimiento())
-                .edadCalculada(edadTexto) // HU-MA04: Edad dinámica
+                .edadCalculada(edadTexto)
                 .idCliente(m.getIdCliente())
                 .estado(m.getEstado())
                 .numeroHistoriaClinica(hm != null ? hm.getNumeroHistoriaClinica() : null)
-                // Usamos Objects.requireNonNullElse extrayendo de forma segura el valor para limpiar el warning
                 .ultimoPeso(Objects.requireNonNullElse(hm != null ? hm.getUltimoPeso() : null, 0.0))
                 .estaEsterilizado(Objects.requireNonNullElse(hm != null ? hm.getEstaEsterilizado() : null, false))
                 .alergiasCriticas(hm != null ? hm.getAlergiasCriticas() : "Ninguna")
