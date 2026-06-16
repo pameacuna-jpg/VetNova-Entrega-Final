@@ -1,11 +1,14 @@
 package com.vetnova.notificaciones.controller;
 
-import com.vetnova.notificaciones.model.Notificacion;
+import com.vetnova.notificaciones.dto.NotificacionRequestDTO;
+import com.vetnova.notificaciones.dto.NotificacionResponseDTO;
 import com.vetnova.notificaciones.service.NotificacionService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -16,53 +19,52 @@ public class NotificacionController {
     private NotificacionService notificacionService;
 
     @GetMapping
-    public List<Notificacion> listarNotificaciones() {
-
-        return notificacionService.listarNotificaciones();
+    public ResponseEntity<List<NotificacionResponseDTO>> listarNotificaciones() {
+        return ResponseEntity.ok(notificacionService.listarNotificaciones());
     }
 
     @GetMapping("/{id}")
-    public Notificacion buscarPorId(@PathVariable Long id) {
-
-        return notificacionService.buscarPorId(id);
+    public ResponseEntity<NotificacionResponseDTO> buscarPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(notificacionService.buscarPorId(id));
     }
 
     @PostMapping
-    public ResponseEntity<Notificacion> crearNotificacion(@Valid @RequestBody Notificacion notificacion) {
-        return ResponseEntity.ok(notificacionService.crearNotificacion(notificacion));
+    public ResponseEntity<NotificacionResponseDTO> crearNotificacion(
+            @Valid @RequestBody NotificacionRequestDTO notificacionRequestDTO) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(notificacionService.crearNotificacion(notificacionRequestDTO));
     }
 
-
     @PutMapping("/{id}")
-    public Notificacion actualizarNotificacion(@PathVariable Long id,
-                                               @Valid @RequestBody Notificacion notificacion) {
+    public ResponseEntity<NotificacionResponseDTO> actualizarNotificacion(
+            @PathVariable Long id,
+            @Valid @RequestBody NotificacionRequestDTO notificacionRequestDTO) {
 
-        return notificacionService.actualizarNotificacion(id, notificacion);
+        return ResponseEntity.ok(
+                notificacionService.actualizarNotificacion(id, notificacionRequestDTO)
+        );
     }
 
     @PatchMapping("/enviar/{id}")
-    public String marcarEnviada(@PathVariable Long id) {
-
+    public ResponseEntity<Void> marcarEnviada(@PathVariable Long id) {
         notificacionService.marcarEnviada(id);
-
-        return "Notificación enviada correctamente";
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/estado/{estado}")
-    public List<Notificacion> buscarPorEstado(@PathVariable String estado) {
-
-        return notificacionService.buscarPorEstado(estado);
+    public ResponseEntity<List<NotificacionResponseDTO>> buscarPorEstado(@PathVariable String estado) {
+        return ResponseEntity.ok(notificacionService.buscarPorEstado(estado));
     }
 
     @GetMapping("/tipo/{tipo}")
-    public List<Notificacion> buscarPorTipo(@PathVariable String tipo) {
-
-        return notificacionService.buscarPorTipo(tipo);
+    public ResponseEntity<List<NotificacionResponseDTO>> buscarPorTipo(@PathVariable String tipo) {
+        return ResponseEntity.ok(notificacionService.buscarPorTipo(tipo));
     }
 
     @GetMapping("/prioridad/{prioridad}")
-    public List<Notificacion> buscarPorPrioridad(@PathVariable String prioridad) {
-
-        return notificacionService.buscarPorPrioridad(prioridad);
+    public ResponseEntity<List<NotificacionResponseDTO>> buscarPorPrioridad(@PathVariable String prioridad) {
+        return ResponseEntity.ok(notificacionService.buscarPorPrioridad(prioridad));
     }
 }

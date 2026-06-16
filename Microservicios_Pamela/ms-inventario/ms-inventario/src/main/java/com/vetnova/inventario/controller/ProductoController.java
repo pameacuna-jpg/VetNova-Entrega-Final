@@ -1,11 +1,14 @@
 package com.vetnova.inventario.controller;
 
-import com.vetnova.inventario.model.Producto;
+import com.vetnova.inventario.dto.ProductoRequestDTO;
+import com.vetnova.inventario.dto.ProductoResponseDTO;
 import com.vetnova.inventario.service.ProductoService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -16,40 +19,49 @@ public class ProductoController {
     private ProductoService productoService;
 
     @GetMapping
-    public List<Producto> listarProductos() {
-        return productoService.listarProductos();
+    public ResponseEntity<List<ProductoResponseDTO>> listarProductos() {
+        return ResponseEntity.ok(productoService.listarProductos());
     }
 
     @GetMapping("/{id}")
-    public Producto buscarPorId(@PathVariable Long id) {
-        return productoService.buscarPorId(id);
+    public ResponseEntity<ProductoResponseDTO> buscarPorId(@PathVariable Long id) {
+        return ResponseEntity.ok(productoService.buscarPorId(id));
     }
-
 
     @PostMapping
-    public ResponseEntity<Producto> crearProducto(@Valid @RequestBody Producto producto) {
-    return ResponseEntity.ok(productoService.crearProducto(producto));
+    public ResponseEntity<ProductoResponseDTO> crearProducto(
+            @Valid @RequestBody ProductoRequestDTO productoRequestDTO) {
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(productoService.crearProducto(productoRequestDTO));
     }
-    
 
     @PutMapping("/{id}")
-    public Producto actualizarProducto(@PathVariable Long id, @Valid @RequestBody Producto producto) {
-        return productoService.actualizarProducto(id, producto);
+    public ResponseEntity<ProductoResponseDTO> actualizarProducto(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductoRequestDTO productoRequestDTO) {
+
+        return ResponseEntity.ok(
+                productoService.actualizarProducto(id, productoRequestDTO)
+        );
     }
 
     @DeleteMapping("/{id}")
-    public String eliminarProducto(@PathVariable Long id) {
+    public ResponseEntity<Void> eliminarProducto(@PathVariable Long id) {
         productoService.eliminarProducto(id);
-        return "Producto eliminado correctamente";
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/categoria/{categoria}")
-    public List<Producto> buscarPorCategoria(@PathVariable String categoria) {
-        return productoService.buscarPorCategoria(categoria);
+    public ResponseEntity<List<ProductoResponseDTO>> buscarPorCategoria(
+            @PathVariable String categoria) {
+
+        return ResponseEntity.ok(productoService.buscarPorCategoria(categoria));
     }
 
     @GetMapping("/bajo-stock")
-    public List<Producto> listarProductosBajoStock() {
-        return productoService.listarProductosBajoStock();
+    public ResponseEntity<List<ProductoResponseDTO>> listarProductosBajoStock() {
+        return ResponseEntity.ok(productoService.listarProductosBajoStock());
     }
 }

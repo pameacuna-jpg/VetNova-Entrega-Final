@@ -13,12 +13,15 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse manejarRuntimeException(RuntimeException ex, HttpServletRequest request) {
+
+        HttpStatus status = determinarStatus(ex.getMessage());
+
         return new ErrorResponse(
                 LocalDateTime.now(),
-                HttpStatus.NOT_FOUND.value(),
-                "Recurso no encontrado",
+                status.value(),
+                status == HttpStatus.NOT_FOUND ? "Recurso no encontrado" : "Error en la solicitud",
                 ex.getMessage(),
                 request.getRequestURI()
         );
@@ -41,5 +44,13 @@ public class GlobalExceptionHandler {
                 mensajes,
                 request.getRequestURI()
         );
+    }
+
+    private HttpStatus determinarStatus(String mensaje) {
+        if (mensaje != null && mensaje.toLowerCase().contains("no encontrado")) {
+            return HttpStatus.NOT_FOUND;
+        }
+
+        return HttpStatus.BAD_REQUEST;
     }
 }

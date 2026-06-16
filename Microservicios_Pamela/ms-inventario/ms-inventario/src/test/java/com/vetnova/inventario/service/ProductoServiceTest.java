@@ -1,5 +1,7 @@
 package com.vetnova.inventario.service;
 
+import com.vetnova.inventario.dto.ProductoRequestDTO;
+import com.vetnova.inventario.dto.ProductoResponseDTO;
 import com.vetnova.inventario.model.Producto;
 import com.vetnova.inventario.repository.ProductoRepository;
 
@@ -28,6 +30,7 @@ public class ProductoServiceTest {
     private ProductoService productoService;
 
     private Producto producto;
+    private ProductoRequestDTO productoRequestDTO;
 
     @BeforeEach
     void setUp() {
@@ -40,60 +43,82 @@ public class ProductoServiceTest {
                 5,
                 true
         );
+
+        productoRequestDTO = new ProductoRequestDTO();
+        productoRequestDTO.setNombre("Vacuna Rabia");
+        productoRequestDTO.setCategoria("Vacunas");
+        productoRequestDTO.setPrecio(15000);
+        productoRequestDTO.setStockActual(10);
+        productoRequestDTO.setStockMinimo(5);
     }
 
     @Test
     void crearProducto_deberiaGuardarProducto() {
-
         when(productoRepository.save(any(Producto.class)))
                 .thenReturn(producto);
 
-        Producto resultado = productoService.crearProducto(producto);
+        ProductoResponseDTO resultado =
+                productoService.crearProducto(productoRequestDTO);
 
         assertNotNull(resultado);
         assertEquals("Vacuna Rabia", resultado.getNombre());
+        assertEquals("Vacunas", resultado.getCategoria());
+        assertTrue(resultado.getActivo());
 
-        verify(productoRepository, times(1)).save(producto);
+        verify(productoRepository, times(1)).save(any(Producto.class));
     }
 
     @Test
     void listarProductos_deberiaRetornarLista() {
-
         when(productoRepository.findByActivoTrue())
                 .thenReturn(Arrays.asList(producto));
 
-        List<Producto> resultado = productoService.listarProductos();
+        List<ProductoResponseDTO> resultado =
+                productoService.listarProductos();
 
         assertEquals(1, resultado.size());
+        assertEquals("Vacuna Rabia", resultado.get(0).getNombre());
 
         verify(productoRepository).findByActivoTrue();
     }
 
     @Test
     void buscarPorId_deberiaRetornarProducto() {
-
         when(productoRepository.findById(1L))
                 .thenReturn(Optional.of(producto));
 
-        Producto resultado = productoService.buscarPorId(1L);
+        ProductoResponseDTO resultado =
+                productoService.buscarPorId(1L);
 
         assertEquals("Vacuna Rabia", resultado.getNombre());
+        assertEquals(1L, resultado.getIdProducto());
 
         verify(productoRepository).findById(1L);
     }
 
     @Test
-    void actualizarProducto_deberiaModificarProducto() {
+    void buscarPorId_cuandoNoExiste_deberiaLanzarExcepcion() {
+        when(productoRepository.findById(99L))
+                .thenReturn(Optional.empty());
 
-        Producto actualizado = new Producto(
-                null,
-                "Vacuna Triple",
-                "Vacunas",
-                18000,
-                20,
-                10,
-                true
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> productoService.buscarPorId(99L)
         );
+
+        assertEquals("Producto no encontrado con ID: 99", exception.getMessage());
+
+        verify(productoRepository).findById(99L);
+    }
+
+    @Test
+    void actualizarProducto_deberiaModificarProducto() {
+        ProductoRequestDTO actualizado = new ProductoRequestDTO();
+        actualizado.setNombre("Vacuna Triple");
+        actualizado.setCategoria("Vacunas");
+        actualizado.setPrecio(18000);
+        actualizado.setStockActual(20);
+        actualizado.setStockMinimo(10);
 
         when(productoRepository.findById(1L))
                 .thenReturn(Optional.of(producto));
@@ -101,18 +126,19 @@ public class ProductoServiceTest {
         when(productoRepository.save(any(Producto.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        Producto resultado =
+        ProductoResponseDTO resultado =
                 productoService.actualizarProducto(1L, actualizado);
 
         assertEquals("Vacuna Triple", resultado.getNombre());
         assertEquals(18000, resultado.getPrecio());
+        assertEquals(20, resultado.getStockActual());
+        assertEquals(10, resultado.getStockMinimo());
 
         verify(productoRepository).save(producto);
     }
 
     @Test
     void eliminarProducto_deberiaDesactivarProducto() {
-
         when(productoRepository.findById(1L))
                 .thenReturn(Optional.of(producto));
 
@@ -128,14 +154,14 @@ public class ProductoServiceTest {
 
     @Test
     void buscarPorCategoria_deberiaRetornarProductos() {
-
         when(productoRepository.findByCategoriaIgnoreCase("Vacunas"))
                 .thenReturn(Arrays.asList(producto));
 
-        List<Producto> resultado =
+        List<ProductoResponseDTO> resultado =
                 productoService.buscarPorCategoria("Vacunas");
 
         assertEquals(1, resultado.size());
+        assertEquals("Vacunas", resultado.get(0).getCategoria());
 
         verify(productoRepository)
                 .findByCategoriaIgnoreCase("Vacunas");
@@ -143,7 +169,6 @@ public class ProductoServiceTest {
 
     @Test
     void listarProductosBajoStock_deberiaRetornarProductosConStockBajo() {
-
         Producto bajoStock = new Producto(
                 2L,
                 "Antibiótico",
@@ -157,25 +182,10 @@ public class ProductoServiceTest {
         when(productoRepository.findAll())
                 .thenReturn(Arrays.asList(producto, bajoStock));
 
-        List<Producto> resultado =
+        List<ProductoResponseDTO> resultado =
                 productoService.listarProductosBajoStock();
 
         assertEquals(1, resultado.size());
         assertEquals("Antibiótico", resultado.get(0).getNombre());
     }
-    @Test
-void buscarPorId_cuandoNoExiste_deberiaLanzarExcepcion() {
-
-    when(productoRepository.findById(99L))
-            .thenReturn(Optional.empty());
-
-    RuntimeException exception = assertThrows(
-            RuntimeException.class,
-            () -> productoService.buscarPorId(99L)
-    );
-
-    assertEquals("Producto no encontrado con ID: 99", exception.getMessage());
-
-    verify(productoRepository).findById(99L);
-}
 }

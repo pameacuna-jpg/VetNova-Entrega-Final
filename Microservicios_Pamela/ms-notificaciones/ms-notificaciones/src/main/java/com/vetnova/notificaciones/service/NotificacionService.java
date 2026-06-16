@@ -1,10 +1,11 @@
 package com.vetnova.notificaciones.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.vetnova.notificaciones.dto.NotificacionRequestDTO;
+import com.vetnova.notificaciones.dto.NotificacionResponseDTO;
 import com.vetnova.notificaciones.model.Notificacion;
 import com.vetnova.notificaciones.repository.NotificacionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,65 +20,94 @@ public class NotificacionService {
     @Autowired
     private NotificacionRepository notificacionRepository;
 
-    public List<Notificacion> listarNotificaciones() {
-
-        return notificacionRepository.findAll();
+    public List<NotificacionResponseDTO> listarNotificaciones() {
+        return notificacionRepository.findAll()
+                .stream()
+                .map(this::mapearAResponse)
+                .toList();
     }
 
-    public Notificacion buscarPorId(Long id) {
+    public NotificacionResponseDTO buscarPorId(Long id) {
+        Notificacion notificacion = obtenerEntidadPorId(id);
+        return mapearAResponse(notificacion);
+    }
 
+    public NotificacionResponseDTO crearNotificacion(NotificacionRequestDTO dto) {
+
+        logger.info("Creando notificación tipo {} para destinatario {}",
+                dto.getTipo(),
+                dto.getDestinatario());
+
+        Notificacion notificacion = new Notificacion();
+
+        notificacion.setDestinatario(dto.getDestinatario());
+        notificacion.setMensaje(dto.getMensaje());
+        notificacion.setTipo(dto.getTipo());
+        notificacion.setEstado("PENDIENTE");
+        notificacion.setCanal(dto.getCanal() != null ? dto.getCanal() : "EMAIL");
+        notificacion.setPrioridad(dto.getPrioridad() != null ? dto.getPrioridad() : "MEDIA");
+
+        Notificacion guardada = notificacionRepository.save(notificacion);
+
+        logger.info("Notificación registrada correctamente");
+
+        return mapearAResponse(guardada);
+    }
+
+    public NotificacionResponseDTO actualizarNotificacion(Long id, NotificacionRequestDTO dto) {
+
+        Notificacion notificacion = obtenerEntidadPorId(id);
+
+        notificacion.setDestinatario(dto.getDestinatario());
+        notificacion.setMensaje(dto.getMensaje());
+        notificacion.setTipo(dto.getTipo());
+        notificacion.setCanal(dto.getCanal() != null ? dto.getCanal() : "EMAIL");
+        notificacion.setPrioridad(dto.getPrioridad() != null ? dto.getPrioridad() : "MEDIA");
+
+        return mapearAResponse(notificacionRepository.save(notificacion));
+    }
+
+    public void marcarEnviada(Long id) {
+        Notificacion notificacion = obtenerEntidadPorId(id);
+        notificacion.setEstado("ENVIADA");
+        notificacionRepository.save(notificacion);
+    }
+
+    public List<NotificacionResponseDTO> buscarPorEstado(String estado) {
+        return notificacionRepository.findByEstadoIgnoreCase(estado)
+                .stream()
+                .map(this::mapearAResponse)
+                .toList();
+    }
+
+    public List<NotificacionResponseDTO> buscarPorTipo(String tipo) {
+        return notificacionRepository.findByTipoIgnoreCase(tipo)
+                .stream()
+                .map(this::mapearAResponse)
+                .toList();
+    }
+
+    public List<NotificacionResponseDTO> buscarPorPrioridad(String prioridad) {
+        return notificacionRepository.findByPrioridadIgnoreCase(prioridad)
+                .stream()
+                .map(this::mapearAResponse)
+                .toList();
+    }
+
+    private Notificacion obtenerEntidadPorId(Long id) {
         return notificacionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Notificación no encontrada con ID: " + id));
     }
 
-    public Notificacion crearNotificacion(Notificacion notificacion) {
-
-       logger.info("Creando notificación tipo {} para destinatario {}",
+    private NotificacionResponseDTO mapearAResponse(Notificacion notificacion) {
+        return new NotificacionResponseDTO(
+                notificacion.getIdNotificacion(),
+                notificacion.getDestinatario(),
+                notificacion.getMensaje(),
                 notificacion.getTipo(),
-                notificacion.getDestinatario()); 
-
-        logger.info("Notificación registrada correctamente");        
-
-        notificacion.setEstado("PENDIENTE");
-
-        return notificacionRepository.save(notificacion);
-    }
-
-    public Notificacion actualizarNotificacion(Long id,
-                                               Notificacion datos) {
-
-        Notificacion notificacion = buscarPorId(id);
-
-        notificacion.setDestinatario(datos.getDestinatario());
-        notificacion.setMensaje(datos.getMensaje());
-        notificacion.setTipo(datos.getTipo());
-        notificacion.setCanal(datos.getCanal());
-        notificacion.setPrioridad(datos.getPrioridad());
-
-        return notificacionRepository.save(notificacion);
-    }
-
-    public void marcarEnviada(Long id) {
-
-        Notificacion notificacion = buscarPorId(id);
-
-        notificacion.setEstado("ENVIADA");
-
-        notificacionRepository.save(notificacion);
-    }
-
-    public List<Notificacion> buscarPorEstado(String estado) {
-
-        return notificacionRepository.findByEstadoIgnoreCase(estado);
-    }
-
-    public List<Notificacion> buscarPorTipo(String tipo) {
-
-        return notificacionRepository.findByTipoIgnoreCase(tipo);
-    }
-
-    public List<Notificacion> buscarPorPrioridad(String prioridad) {
-
-        return notificacionRepository.findByPrioridadIgnoreCase(prioridad);
+                notificacion.getEstado(),
+                notificacion.getCanal(),
+                notificacion.getPrioridad()
+        );
     }
 }
