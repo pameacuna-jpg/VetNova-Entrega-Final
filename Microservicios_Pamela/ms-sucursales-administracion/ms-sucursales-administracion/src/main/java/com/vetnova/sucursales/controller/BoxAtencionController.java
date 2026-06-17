@@ -3,7 +3,6 @@ package com.vetnova.sucursales.controller;
 import com.vetnova.sucursales.model.BoxAtencion;
 import com.vetnova.sucursales.service.BoxAtencionService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import java.util.List;
@@ -12,9 +11,13 @@ import java.util.List;
 @RequestMapping("/api/v1/boxes")
 public class BoxAtencionController {
 
-    @Autowired
-    private BoxAtencionService boxAtencionService;
 
+    private final BoxAtencionService boxAtencionService;
+
+    public BoxAtencionController(BoxAtencionService boxAtencionService) {
+        this.boxAtencionService = boxAtencionService;
+    }
+    
     @GetMapping
     public List<BoxAtencion> listarBoxes() {
 

@@ -3,7 +3,6 @@ package com.vetnova.sucursales.controller;
 import com.vetnova.sucursales.model.HorarioSucursal;
 import com.vetnova.sucursales.service.HorarioSucursalService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import java.util.List;
@@ -12,8 +11,12 @@ import java.util.List;
 @RequestMapping("/api/v1/horarios")
 public class HorarioSucursalController {
 
-    @Autowired
-    private HorarioSucursalService horarioSucursalService;
+
+    private final HorarioSucursalService horarioSucursalService;
+
+    public HorarioSucursalController(HorarioSucursalService horarioSucursalService) {
+        this.horarioSucursalService = horarioSucursalService;
+    }
 
     @GetMapping
     public List<HorarioSucursal> listarHorarios() {
@@ -41,7 +44,7 @@ public class HorarioSucursalController {
 
     @PutMapping("/{id}")
     public HorarioSucursal actualizarHorario(@PathVariable Long id,
-                                             @Valid @RequestBody HorarioSucursal horario) {
+                                            @Valid @RequestBody HorarioSucursal horario) {
 
         return horarioSucursalService.actualizarHorario(id, horario);
     }

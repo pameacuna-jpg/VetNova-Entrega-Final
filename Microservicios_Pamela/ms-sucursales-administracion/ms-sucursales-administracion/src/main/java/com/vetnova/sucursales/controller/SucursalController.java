@@ -3,7 +3,6 @@ package com.vetnova.sucursales.controller;
 import com.vetnova.sucursales.model.Sucursal;
 import com.vetnova.sucursales.service.SucursalService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import java.util.List;
@@ -12,8 +11,12 @@ import java.util.List;
 @RequestMapping("/api/v1/sucursales")
 public class SucursalController {
 
-    @Autowired
-    private SucursalService sucursalService;
+
+    private final SucursalService sucursalService;
+
+    public SucursalController(SucursalService sucursalService) {
+        this.sucursalService = sucursalService;
+    }
 
     @GetMapping
     public List<Sucursal> listarSucursales() {

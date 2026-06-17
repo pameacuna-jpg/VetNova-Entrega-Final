@@ -3,7 +3,7 @@ spring:
     name: atencion-clinica-service
 
   datasource:
-    url: jdbc:mysql://localhost:3306/db_atencion_clinica?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+    url: jdbc:mysql://localhost:3306/vetnova_atencion_clinica?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
     username: root
     password: ""
     driver-class-name: com.mysql.cj.jdbc.Driver

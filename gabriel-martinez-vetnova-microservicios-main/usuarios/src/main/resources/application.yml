@@ -3,7 +3,7 @@ spring:
     name: usuarios
 
   datasource:
-    url: jdbc:mysql://localhost:3306/db_usuarios?createDatabaseIfNotExist=true&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/vetnova_usuarios?createDatabaseIfNotExist=true&serverTimezone=UTC&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     password:
     driver-class-name: com.mysql.cj.jdbc.Driver

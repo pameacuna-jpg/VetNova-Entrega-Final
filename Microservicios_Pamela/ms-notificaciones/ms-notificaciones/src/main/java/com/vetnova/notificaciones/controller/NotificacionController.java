@@ -4,7 +4,6 @@ import com.vetnova.notificaciones.dto.NotificacionRequestDTO;
 import com.vetnova.notificaciones.dto.NotificacionResponseDTO;
 import com.vetnova.notificaciones.service.NotificacionService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,8 +14,13 @@ import java.util.List;
 @RequestMapping("/api/v1/notificaciones")
 public class NotificacionController {
 
-    @Autowired
-    private NotificacionService notificacionService;
+    // 1. Declarar la dependencia como final (Buenas prácticas de diseño)
+    private final NotificacionService notificacionService;
+
+    // 2. Inyección explícita a través del constructor
+    public NotificacionController(NotificacionService notificacionService) {
+        this.notificacionService = notificacionService;
+    }
 
     @GetMapping
     public ResponseEntity<List<NotificacionResponseDTO>> listarNotificaciones() {

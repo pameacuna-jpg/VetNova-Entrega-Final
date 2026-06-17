@@ -6,7 +6,6 @@ import com.vetnova.notificaciones.model.Notificacion;
 import com.vetnova.notificaciones.repository.NotificacionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,11 +13,16 @@ import java.util.List;
 @Service
 public class NotificacionService {
 
-    private static final Logger logger =
+    private static final Logger logger = 
             LoggerFactory.getLogger(NotificacionService.class);
 
-    @Autowired
-    private NotificacionRepository notificacionRepository;
+    // 1. Declarar la dependencia como final (Buenas prácticas de diseño)
+    private final NotificacionRepository notificacionRepository;
+
+    // 2. Inyección explícita a través del constructor
+    public NotificacionService(NotificacionRepository notificacionRepository) {
+        this.notificacionRepository = notificacionRepository;
+    }
 
     public List<NotificacionResponseDTO> listarNotificaciones() {
         return notificacionRepository.findAll()
@@ -33,13 +37,11 @@ public class NotificacionService {
     }
 
     public NotificacionResponseDTO crearNotificacion(NotificacionRequestDTO dto) {
-
         logger.info("Creando notificación tipo {} para destinatario {}",
                 dto.getTipo(),
                 dto.getDestinatario());
 
         Notificacion notificacion = new Notificacion();
-
         notificacion.setDestinatario(dto.getDestinatario());
         notificacion.setMensaje(dto.getMensaje());
         notificacion.setTipo(dto.getTipo());
@@ -48,14 +50,12 @@ public class NotificacionService {
         notificacion.setPrioridad(dto.getPrioridad() != null ? dto.getPrioridad() : "MEDIA");
 
         Notificacion guardada = notificacionRepository.save(notificacion);
-
         logger.info("Notificación registrada correctamente");
 
         return mapearAResponse(guardada);
     }
 
     public NotificacionResponseDTO actualizarNotificacion(Long id, NotificacionRequestDTO dto) {
-
         Notificacion notificacion = obtenerEntidadPorId(id);
 
         notificacion.setDestinatario(dto.getDestinatario());

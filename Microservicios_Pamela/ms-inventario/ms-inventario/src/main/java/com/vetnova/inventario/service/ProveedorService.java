@@ -2,7 +2,6 @@ package com.vetnova.inventario.service;
 
 import com.vetnova.inventario.model.Proveedor;
 import com.vetnova.inventario.repository.ProveedorRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,8 +9,12 @@ import java.util.List;
 @Service
 public class ProveedorService {
 
-    @Autowired
-    private ProveedorRepository proveedorRepository;
+    
+    private final ProveedorRepository proveedorRepository;
+
+    public ProveedorService(ProveedorRepository proveedorRepository) {
+        this.proveedorRepository = proveedorRepository;
+    }
 
     public List<Proveedor> listarProveedores() {
         return proveedorRepository.findByActivoTrue();
