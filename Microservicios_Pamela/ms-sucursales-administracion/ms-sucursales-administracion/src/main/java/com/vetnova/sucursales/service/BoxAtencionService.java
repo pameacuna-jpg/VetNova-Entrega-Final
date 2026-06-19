@@ -2,7 +2,6 @@ package com.vetnova.sucursales.service;
 
 import com.vetnova.sucursales.model.BoxAtencion;
 import com.vetnova.sucursales.repository.BoxAtencionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,8 +9,12 @@ import java.util.List;
 @Service
 public class BoxAtencionService {
 
-    @Autowired
-    private BoxAtencionRepository boxAtencionRepository;
+
+    private final BoxAtencionRepository boxAtencionRepository;
+
+    public BoxAtencionService(BoxAtencionRepository boxAtencionRepository) {
+        this.boxAtencionRepository = boxAtencionRepository;
+    }
 
     public List<BoxAtencion> listarBoxes() {
         return boxAtencionRepository.findAll();

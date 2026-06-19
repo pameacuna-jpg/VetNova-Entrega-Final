@@ -3,7 +3,7 @@ spring:
     name: ventas-service
 
   datasource:
-    url: jdbc:mysql://localhost:3306/db_ventas?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+    url: jdbc:mysql://localhost:3306/vetnova_ventas?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
     username: root
     password: ""
     driver-class-name: com.mysql.cj.jdbc.Driver

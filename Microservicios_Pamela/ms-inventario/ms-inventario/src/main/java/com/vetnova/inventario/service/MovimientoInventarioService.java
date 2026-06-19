@@ -1,36 +1,43 @@
 package com.vetnova.inventario.service;
 
-import com.vetnova.inventario.dto.NotificacionRequest;
+import com.vetnova.inventario.dto.StockBajoEvent; // Importación del evento mapeado en el paquete dto
 import com.vetnova.inventario.model.MovimientoInventario;
 import com.vetnova.inventario.model.Producto;
 import com.vetnova.inventario.repository.MovimientoInventarioRepository;
 import com.vetnova.inventario.repository.ProductoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
+/**
+ * Servicio de negocio para la gestión y control de flujos de inventario.
+ * Implementa el estándar CSR y la inyección inmutable por constructor exigida.
+ */
 @Service
 public class MovimientoInventarioService {
 
     private static final Logger logger =
             LoggerFactory.getLogger(MovimientoInventarioService.class);
 
-    @Autowired
-    private MovimientoInventarioRepository movimientoRepository;
+    // Atributos de dependencias declarados como final (Inmutabilidad obligatoria)
+    private final MovimientoInventarioRepository movimientoRepository;
+    private final ProductoRepository productoRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
-    @Autowired
-    private ProductoRepository productoRepository;
-
-    @Autowired
-    private RestTemplate restTemplate;
-
-    @Value("${notificaciones.url}")
-    private String notificacionesUrl;
+    /**
+     * UN ÚNICO CONSTRUCTOR EXPLÍCITO
+     * Resuelve el error de sobrecarga ambigua y cumple con el Mandato de Alineación Técnica.
+     */
+    public MovimientoInventarioService(MovimientoInventarioRepository movimientoRepository,
+                                    ProductoRepository productoRepository,
+                                    ApplicationEventPublisher eventPublisher) {
+        this.movimientoRepository = movimientoRepository;
+        this.productoRepository = productoRepository;
+        this.eventPublisher = eventPublisher;
+    }
 
     public List<MovimientoInventario> listarMovimientos() {
         return movimientoRepository.findAll();
@@ -80,36 +87,36 @@ public class MovimientoInventarioService {
                 producto.getNombre(),
                 producto.getStockActual());
 
+        // Evaluación del umbral crítico de abastecimiento
         if (producto.getStockActual() <= producto.getStockMinimo()) {
-            enviarNotificacionStockBajo(producto, movimiento.getIdSucursal());
+            publicarEventoStockBajo(producto, movimiento.getIdSucursal());
         }
 
         return movimientoRepository.save(movimiento);
     }
 
-    private void enviarNotificacionStockBajo(Producto producto, Long idSucursal) {
+    /**
+     * Despacha un evento interno asíncrono dentro del contexto de Spring.
+     * Esto elimina la dependencia síncrona muerta de RestTemplate.
+     */
+    private void publicarEventoStockBajo(Producto producto, Long idSucursal) {
         try {
-            NotificacionRequest request = new NotificacionRequest(
-                    "administracion",
-                    "Stock bajo del producto " + producto.getNombre()
-                            + ". Stock actual: " + producto.getStockActual()
-                            + ". Stock mínimo: " + producto.getStockMinimo()
-                            + ". Sucursal ID: " + idSucursal,
-                    "STOCK_BAJO",
-                    "SISTEMA",
-                    "ALTA"
+            logger.warn("Emitiendo de forma desacoplada StockBajoEvent para el producto: {}", producto.getNombre());
+            
+            // Instanciación del evento DTO pasando el 'source' (this) y los datos requeridos
+            StockBajoEvent evento = new StockBajoEvent(
+                    this,
+                    producto.getNombre(),
+                    producto.getStockActual(),
+                    producto.getStockMinimo(),
+                    idSucursal
             );
 
-            restTemplate.postForEntity(
-                    notificacionesUrl,
-                    request,
-                    String.class
-            );
-
-            logger.warn("Notificación STOCK_BAJO enviada para producto: {}", producto.getNombre());
+            // Uso operativo de la variable inyectada (Resuelve el warning 'is not used')
+            eventPublisher.publishEvent(evento);
 
         } catch (Exception e) {
-            logger.warn("No se pudo enviar notificación de stock bajo: {}", e.getMessage());
+            logger.error("Error crítico al despachar el evento de inventario: {}", e.getMessage());
         }
     }
 

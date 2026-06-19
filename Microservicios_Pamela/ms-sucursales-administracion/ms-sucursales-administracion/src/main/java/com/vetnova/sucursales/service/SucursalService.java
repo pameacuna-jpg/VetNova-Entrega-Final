@@ -2,7 +2,6 @@ package com.vetnova.sucursales.service;
 
 import com.vetnova.sucursales.model.Sucursal;
 import com.vetnova.sucursales.repository.SucursalRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,8 +9,12 @@ import java.util.List;
 @Service
 public class SucursalService {
 
-    @Autowired
-    private SucursalRepository sucursalRepository;
+
+    private final SucursalRepository sucursalRepository;
+
+    public SucursalService(SucursalRepository sucursalRepository) {
+        this.sucursalRepository = sucursalRepository;
+    }
 
     public List<Sucursal> listarSucursales() {
         return sucursalRepository.findAll();

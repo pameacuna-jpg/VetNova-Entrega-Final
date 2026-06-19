@@ -2,7 +2,6 @@ package com.vetnova.sucursales.service;
 
 import com.vetnova.sucursales.model.HorarioSucursal;
 import com.vetnova.sucursales.repository.HorarioSucursalRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,8 +9,12 @@ import java.util.List;
 @Service
 public class HorarioSucursalService {
 
-    @Autowired
-    private HorarioSucursalRepository horarioSucursalRepository;
+
+    private final HorarioSucursalRepository horarioSucursalRepository;
+
+    public HorarioSucursalService(HorarioSucursalRepository horarioSucursalRepository) {
+        this.horarioSucursalRepository = horarioSucursalRepository;
+    }
 
     public List<HorarioSucursal> listarHorarios() {
 

@@ -3,7 +3,7 @@ spring:
     name: agenda-service
 
   datasource:
-    url: jdbc:mysql://localhost:3306/db_agenda?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+    url: jdbc:mysql://localhost:3306/vetnova_agenda?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
     username: root
     password: ""
     driver-class-name: com.mysql.cj.jdbc.Driver

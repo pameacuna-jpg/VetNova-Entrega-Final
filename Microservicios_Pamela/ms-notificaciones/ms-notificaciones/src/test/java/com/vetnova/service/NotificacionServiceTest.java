@@ -1,9 +1,10 @@
-package com.vetnova.notificaciones.service;
+package com.vetnova.service; // LÍNEA 1: Corregida para que coincida con la ruta física del archivo
 
 import com.vetnova.notificaciones.dto.NotificacionRequestDTO;
 import com.vetnova.notificaciones.dto.NotificacionResponseDTO;
 import com.vetnova.notificaciones.model.Notificacion;
 import com.vetnova.notificaciones.repository.NotificacionRepository;
+import com.vetnova.notificaciones.service.NotificacionService; // Importación explícita del servicio bajo testeo
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,7 +14,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,7 +34,7 @@ class NotificacionServiceTest {
 
     @BeforeEach
     void setUp() {
-
+        // Inicialización usando el constructor por parámetros del modelo
         notificacion = new Notificacion(
                 1L,
                 "Administrador",
@@ -55,36 +55,31 @@ class NotificacionServiceTest {
 
     @Test
     void listarNotificaciones_deberiaRetornarLista() {
-
+        // Uso de List.of (Estándar moderno en Java 21)
         when(notificacionRepository.findAll())
-                .thenReturn(Arrays.asList(notificacion));
+                .thenReturn(List.of(notificacion));
 
         List<NotificacionResponseDTO> resultado =
                 notificacionService.listarNotificaciones();
 
         assertEquals(1, resultado.size());
-
         verify(notificacionRepository).findAll();
     }
 
     @Test
     void buscarPorId_deberiaRetornarNotificacion() {
-
         when(notificacionRepository.findById(1L))
                 .thenReturn(Optional.of(notificacion));
 
         NotificacionResponseDTO resultado =
                 notificacionService.buscarPorId(1L);
 
-        assertEquals("Administrador",
-                resultado.getDestinatario());
-
+        assertEquals("Administrador", resultado.getDestinatario());
         verify(notificacionRepository).findById(1L);
     }
 
     @Test
     void buscarPorId_noExiste_deberiaLanzarExcepcion() {
-
         when(notificacionRepository.findById(99L))
                 .thenReturn(Optional.empty());
 
@@ -101,7 +96,6 @@ class NotificacionServiceTest {
 
     @Test
     void crearNotificacion_deberiaGuardarNotificacion() {
-
         when(notificacionRepository.save(any(Notificacion.class)))
                 .thenReturn(notificacion);
 
@@ -109,21 +103,13 @@ class NotificacionServiceTest {
                 notificacionService.crearNotificacion(requestDTO);
 
         assertNotNull(resultado);
-
-        assertEquals(
-                "PENDIENTE",
-                resultado.getEstado()
-        );
-
-        verify(notificacionRepository)
-                .save(any(Notificacion.class));
+        assertEquals("PENDIENTE", resultado.getEstado());
+        verify(notificacionRepository).save(any(Notificacion.class));
     }
 
     @Test
     void actualizarNotificacion_deberiaModificarDatos() {
-
         NotificacionRequestDTO nueva = new NotificacionRequestDTO();
-
         nueva.setDestinatario("Cliente");
         nueva.setMensaje("Recordatorio de vacuna");
         nueva.setTipo("RECORDATORIO");
@@ -139,22 +125,13 @@ class NotificacionServiceTest {
         NotificacionResponseDTO resultado =
                 notificacionService.actualizarNotificacion(1L, nueva);
 
-        assertEquals(
-                "Cliente",
-                resultado.getDestinatario()
-        );
-
-        assertEquals(
-                "ALTA",
-                resultado.getPrioridad()
-        );
-
+        assertEquals("Cliente", resultado.getDestinatario());
+        assertEquals("ALTA", resultado.getPrioridad());
         verify(notificacionRepository).save(notificacion);
     }
 
     @Test
     void marcarEnviada_deberiaCambiarEstado() {
-
         when(notificacionRepository.findById(1L))
                 .thenReturn(Optional.of(notificacion));
 
@@ -163,19 +140,14 @@ class NotificacionServiceTest {
 
         notificacionService.marcarEnviada(1L);
 
-        assertEquals(
-                "ENVIADA",
-                notificacion.getEstado()
-        );
-
+        assertEquals("ENVIADA", notificacion.getEstado());
         verify(notificacionRepository).save(notificacion);
     }
 
     @Test
     void buscarPorEstado_deberiaRetornarResultados() {
-
         when(notificacionRepository.findByEstadoIgnoreCase("PENDIENTE"))
-                .thenReturn(Arrays.asList(notificacion));
+                .thenReturn(List.of(notificacion));
 
         List<NotificacionResponseDTO> resultado =
                 notificacionService.buscarPorEstado("PENDIENTE");
@@ -185,9 +157,8 @@ class NotificacionServiceTest {
 
     @Test
     void buscarPorTipo_deberiaRetornarResultados() {
-
         when(notificacionRepository.findByTipoIgnoreCase("STOCK_BAJO"))
-                .thenReturn(Arrays.asList(notificacion));
+                .thenReturn(List.of(notificacion));
 
         List<NotificacionResponseDTO> resultado =
                 notificacionService.buscarPorTipo("STOCK_BAJO");
@@ -197,9 +168,8 @@ class NotificacionServiceTest {
 
     @Test
     void buscarPorPrioridad_deberiaRetornarResultados() {
-
         when(notificacionRepository.findByPrioridadIgnoreCase("MEDIA"))
-                .thenReturn(Arrays.asList(notificacion));
+                .thenReturn(List.of(notificacion));
 
         List<NotificacionResponseDTO> resultado =
                 notificacionService.buscarPorPrioridad("MEDIA");

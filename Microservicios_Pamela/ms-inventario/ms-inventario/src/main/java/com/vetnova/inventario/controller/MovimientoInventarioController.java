@@ -3,7 +3,6 @@ package com.vetnova.inventario.controller;
 import com.vetnova.inventario.model.MovimientoInventario;
 import com.vetnova.inventario.service.MovimientoInventarioService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import java.util.List;
@@ -12,8 +11,12 @@ import java.util.List;
 @RequestMapping("/api/v1/movimientos")
 public class MovimientoInventarioController {
 
-    @Autowired
-    private MovimientoInventarioService movimientoService;
+    
+    private final MovimientoInventarioService movimientoService;
+
+    public MovimientoInventarioController(MovimientoInventarioService movimientoService) {
+        this.movimientoService = movimientoService;
+    }
 
     @GetMapping
     public List<MovimientoInventario> listarMovimientos() {
