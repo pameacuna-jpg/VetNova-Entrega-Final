@@ -3,7 +3,8 @@ spring:
     name: auth-service
 
   datasource:
-    url: jdbc:mysql://localhost:3306/vetnova_auth_service?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+    # URL corregida al nombre oficial: vetnova_auth
+    url: jdbc:mysql://localhost:3306/vetnova_auth?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
     username: root
     password: ""
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -24,7 +25,6 @@ springdoc:
   api-docs:
     enabled: true
     path: /v3/api-docs
-
   swagger-ui:
     enabled: true
     path: /swagger-ui.html

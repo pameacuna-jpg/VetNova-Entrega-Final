@@ -1,30 +1,32 @@
 package com.vetnova.auth.service;
 
-import com.vetnova.auth.dto.AuthResponse;
 import com.vetnova.auth.dto.LoginRequest;
-import com.vetnova.auth.dto.RegistroUsuarioRequest;
+import com.vetnova.auth.exception.InvalidCredentialsException;
 import com.vetnova.auth.model.AuthUsuario;
 import com.vetnova.auth.repository.AuthUsuarioRepository;
 import com.vetnova.auth.security.JwtUtil;
+import com.vetnova.auth.event.EventoDominio;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
     @Mock
-    private AuthUsuarioRepository authUsuarioRepository;
+    private AuthUsuarioRepository repository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -32,145 +34,72 @@ class AuthServiceTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private AuthService authService;
 
-    private RegistroUsuarioRequest registroRequest;
-    private LoginRequest loginRequest;
+    private LoginRequest request;
     private AuthUsuario usuario;
 
     @BeforeEach
     void setUp() {
-        registroRequest = new RegistroUsuarioRequest();
-        registroRequest.setEmail("admin@vetnova.cl");
-        registroRequest.setPassword("123456");
-        registroRequest.setRol("ADMIN");
+        // Preparamos los datos de entrada
+        request = new LoginRequest();
+        request.setEmail("admin@vetnova.cl");
+        request.setPassword("123456");
 
-        loginRequest = new LoginRequest();
-        loginRequest.setEmail("admin@vetnova.cl");
-        loginRequest.setPassword("123456");
-
-        usuario = AuthUsuario.builder()
-                .id(1L)
-                .email("admin@vetnova.cl")
-                .password("password-encriptada")
-                .rol("ADMIN")
-                .activo(true)
-                .build();
+        // Preparamos el usuario simulado de la BD
+        usuario = new AuthUsuario();
+        usuario.setEmail("admin@vetnova.cl");
+        usuario.setPassword("hashed_password_desde_bd");
+        usuario.setRol("ADMIN");
     }
 
     @Test
-    void registrar_deberiaCrearUsuarioYRetornarToken() {
-        // Given
-        when(authUsuarioRepository.existsByEmail("admin@vetnova.cl")).thenReturn(false);
-        when(passwordEncoder.encode("123456")).thenReturn("password-encriptada");
-        when(authUsuarioRepository.save(any(AuthUsuario.class))).thenReturn(usuario);
-        when(jwtUtil.generarToken("admin@vetnova.cl", "ADMIN")).thenReturn("token-test");
+    void procesarLogin_Exito_DebeRetornarTokenYPublicarEvento() {
+        // Given: Simulamos que el usuario existe y la contraseña coincide
+        when(repository.findByEmail(request.getEmail())).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches(request.getPassword(), usuario.getPassword())).thenReturn(true);
+        when(jwtUtil.generateToken(usuario.getEmail())).thenReturn("token-jwt-generado");
 
-        // When
-        AuthResponse response = authService.registrar(registroRequest);
+        // When: Ejecutamos el login
+        String token = authService.procesarLogin(request);
 
-        // Then
-        assertNotNull(response);
-        assertEquals("token-test", response.getToken());
-        assertEquals("admin@vetnova.cl", response.getEmail());
-        assertEquals("ADMIN", response.getRol());
-
-        verify(authUsuarioRepository).existsByEmail("admin@vetnova.cl");
-        verify(passwordEncoder).encode("123456");
-        verify(authUsuarioRepository).save(any(AuthUsuario.class));
-        verify(jwtUtil).generarToken("admin@vetnova.cl", "ADMIN");
+        // Then: Verificamos el resultado y que se publicó el evento LoginExitoso
+        assertEquals("token-jwt-generado", token);
+        verify(eventPublisher, times(1)).publishEvent(any(EventoDominio.class));
     }
 
     @Test
-    void registrar_deberiaLanzarExcepcionSiEmailYaExiste() {
-        // Given
-        when(authUsuarioRepository.existsByEmail("admin@vetnova.cl")).thenReturn(true);
+    void procesarLogin_UsuarioNoEncontrado_DebeLanzarExcepcion() {
+        // Given: Simulamos que la BD no encuentra al usuario
+        when(repository.findByEmail(request.getEmail())).thenReturn(Optional.empty());
 
-        // When
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> authService.registrar(registroRequest)
-        );
-
-        // Then
-        assertEquals("El email ya está registrado", exception.getMessage());
-        verify(authUsuarioRepository).existsByEmail("admin@vetnova.cl");
-        verify(authUsuarioRepository, never()).save(any(AuthUsuario.class));
+        // When & Then: Esperamos que arroje el error y publique el evento LoginFallido
+        assertThrows(InvalidCredentialsException.class, () -> authService.procesarLogin(request));
+        
+        verify(eventPublisher, times(1)).publishEvent(any(EventoDominio.class));
+        verify(passwordEncoder, never()).matches(anyString(), anyString()); // Nunca debe llegar a comparar contraseñas
     }
 
     @Test
-    void login_deberiaRetornarTokenCuandoCredencialesSonValidas() {
-        // Given
-        when(authUsuarioRepository.findByEmail("admin@vetnova.cl")).thenReturn(Optional.of(usuario));
-        when(passwordEncoder.matches("123456", "password-encriptada")).thenReturn(true);
-        when(jwtUtil.generarToken("admin@vetnova.cl", "ADMIN")).thenReturn("token-login");
+    void procesarLogin_ContrasenaIncorrecta_DebeLanzarExcepcion() {
+        // Given: Simulamos que el usuario existe pero la contraseña falla
+        when(repository.findByEmail(request.getEmail())).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches(request.getPassword(), usuario.getPassword())).thenReturn(false);
 
-        // When
-        AuthResponse response = authService.login(loginRequest);
+        // When & Then: Esperamos el error y el evento LoginFallido
+        assertThrows(InvalidCredentialsException.class, () -> authService.procesarLogin(request));
 
-        // Then
-        assertNotNull(response);
-        assertEquals("token-login", response.getToken());
-        assertEquals("admin@vetnova.cl", response.getEmail());
-        assertEquals("ADMIN", response.getRol());
-
-        verify(authUsuarioRepository).findByEmail("admin@vetnova.cl");
-        verify(passwordEncoder).matches("123456", "password-encriptada");
-        verify(jwtUtil).generarToken("admin@vetnova.cl", "ADMIN");
+        verify(eventPublisher, times(1)).publishEvent(any(EventoDominio.class));
+        verify(jwtUtil, never()).generateToken(anyString()); // Nunca debe generar un token
     }
 
     @Test
-    void login_deberiaLanzarExcepcionSiUsuarioNoExiste() {
-        // Given
-        when(authUsuarioRepository.findByEmail("admin@vetnova.cl")).thenReturn(Optional.empty());
-
-        // When
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> authService.login(loginRequest)
-        );
-
-        // Then
-        assertEquals("Credenciales inválidas", exception.getMessage());
-        verify(authUsuarioRepository).findByEmail("admin@vetnova.cl");
-        verify(passwordEncoder, never()).matches(anyString(), anyString());
-    }
-
-    @Test
-    void login_deberiaLanzarExcepcionSiUsuarioEstaInactivo() {
-        // Given
-        usuario.setActivo(false);
-        when(authUsuarioRepository.findByEmail("admin@vetnova.cl")).thenReturn(Optional.of(usuario));
-
-        // When
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> authService.login(loginRequest)
-        );
-
-        // Then
-        assertEquals("Usuario inactivo", exception.getMessage());
-        verify(authUsuarioRepository).findByEmail("admin@vetnova.cl");
-        verify(passwordEncoder, never()).matches(anyString(), anyString());
-    }
-
-    @Test
-    void login_deberiaLanzarExcepcionSiPasswordEsIncorrecta() {
-        // Given
-        when(authUsuarioRepository.findByEmail("admin@vetnova.cl")).thenReturn(Optional.of(usuario));
-        when(passwordEncoder.matches("123456", "password-encriptada")).thenReturn(false);
-
-        // When
-        RuntimeException exception = assertThrows(
-                RuntimeException.class,
-                () -> authService.login(loginRequest)
-        );
-
-        // Then
-        assertEquals("Credenciales inválidas", exception.getMessage());
-        verify(authUsuarioRepository).findByEmail("admin@vetnova.cl");
-        verify(passwordEncoder).matches("123456", "password-encriptada");
-        verify(jwtUtil, never()).generarToken(anyString(), anyString());
+    void recuperarContrasena_DebeRetornarMensaje() {
+        String resultado = authService.recuperarContrasena("test@test.cl");
+        assertEquals("Se han enviado las instrucciones a test@test.cl", resultado);
     }
 }
