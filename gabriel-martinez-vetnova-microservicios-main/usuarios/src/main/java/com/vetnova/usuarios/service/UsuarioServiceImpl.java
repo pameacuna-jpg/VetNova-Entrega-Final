@@ -109,6 +109,16 @@ public class UsuarioServiceImpl implements IUsuarioService {
         log.info("Usuario ID: {} cambiado a estado INACTIVE correctamente.", idUsuario);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<UsuarioResponseDTO> listarTodosLosUsuarios() {
+        log.info("HU-UR06: Solicitando listado completo de usuarios del sistema");
+        
+        return usuarioRepository.findAll().stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
     private UsuarioResponseDTO mapToResponseDTO(Usuario usuario) {
         List<String> nombresRoles = usuario.getRolesAsignados().stream()
                 .map(usuarioRol -> usuarioRol.getRol().getNombreRol())

@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -155,6 +156,7 @@ class UsuarioServiceImplTest {
                 .email("activo@vetnova.cl")
                 .estado("ACTIVE")
                 .idSucursal(1L)
+                .idSucursal(1L)
                 .rolesAsignados(new ArrayList<>())
                 .build();
 
@@ -179,5 +181,30 @@ class UsuarioServiceImplTest {
 
         assertEquals("Usuario no encontrado", exception.getMessage());
         verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void listarTodosLosUsuarios_debeRetornarListaDeUsuarios() {
+        // Given
+        Usuario usuarioMock = Usuario.builder()
+                .idUsuario(1L)
+                .nombre("Dr. Daniel Castro")
+                .email("daniel.doctor@vetnova.cl")
+                .estado("ACTIVE")
+                .idSucursal(5L)
+                .rolesAsignados(new ArrayList<>())
+                .build();
+
+        when(usuarioRepository.findAll()).thenReturn(List.of(usuarioMock));
+
+        // When
+        List<UsuarioResponseDTO> resultado = usuarioService.listarTodosLosUsuarios();
+
+        // Then
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+        assertEquals("Dr. Daniel Castro", resultado.get(0).getNombre());
+        assertEquals("daniel.doctor@vetnova.cl", resultado.get(0).getEmail());
+        verify(usuarioRepository, times(1)).findAll();
     }
 }

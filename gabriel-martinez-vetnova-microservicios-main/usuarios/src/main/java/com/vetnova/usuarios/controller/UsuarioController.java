@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -23,7 +24,11 @@ public class UsuarioController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    
+    @GetMapping
+    public ResponseEntity<List<UsuarioResponseDTO>> listarUsuarios() {
+        List<UsuarioResponseDTO> response = usuarioService.listarTodosLosUsuarios();
+        return ResponseEntity.ok(response);
+    }
 
     @PutMapping("/{id}/roles")
     public ResponseEntity<UsuarioResponseDTO> actualizarRoles(
@@ -31,8 +36,6 @@ public class UsuarioController {
             @RequestBody Set<Long> idsRoles) {
         return ResponseEntity.ok(usuarioService.actualizarRoles(id, idsRoles));
     }
-
-    
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> desactivarUsuario(@PathVariable Long id) {
