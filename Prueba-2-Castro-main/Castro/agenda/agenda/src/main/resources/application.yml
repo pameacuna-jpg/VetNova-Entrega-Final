@@ -38,5 +38,8 @@ logging:
     com:
       vetnova: DEBUG
 
-notificaciones:
-  url: http://localhost:8089/api/v1/notificaciones
+services:
+  clientes:
+    url: http://localhost:8084
+  mascotas:
+    url: http://localhost:8085
