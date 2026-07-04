@@ -1,24 +1,29 @@
 package com.vetnova.atencionclinica.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vetnova.atencionclinica.dto.DiagnosticoRequestDTO;
-import com.vetnova.atencionclinica.model.Diagnostico;
-import com.vetnova.atencionclinica.model.FichaClinica;
-import com.vetnova.atencionclinica.service.DiagnosticoService;
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.LocalDateTime;
-import java.util.Map;
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vetnova.atencionclinica.dto.CertificadoRequestDTO;
+import com.vetnova.atencionclinica.dto.DiagnosticoRequestDTO;
+import com.vetnova.atencionclinica.dto.DiagnosticoResponseDTO;
+import com.vetnova.atencionclinica.dto.RecetaRequestDTO;
+import com.vetnova.atencionclinica.dto.TratamientoRequestDTO;
+import com.vetnova.atencionclinica.service.DiagnosticoService;
 
 @WebMvcTest(AtencionController.class)
 class AtencionControllerTest {
@@ -34,7 +39,7 @@ class AtencionControllerTest {
 
     @Test
     void buscarAtencionPorId_debeRetornarOk() throws Exception {
-        Mockito.when(service.buscarPorId(1L)).thenReturn(crearDiagnostico());
+        Mockito.when(service.buscarPorId(1L)).thenReturn(crearDiagnosticoResponse());
 
         mockMvc.perform(get("/api/v1/atenciones/id/1"))
                 .andExpect(status().isOk())
@@ -46,8 +51,8 @@ class AtencionControllerTest {
 
     @Test
     void registrarDiagnostico_debeRetornarCreated() throws Exception {
-        Mockito.when(service.registrarDiagnostico(any(Diagnostico.class)))
-                .thenReturn(crearDiagnostico());
+        Mockito.when(service.registrarDiagnostico(any(DiagnosticoRequestDTO.class)))
+                .thenReturn(crearDiagnosticoResponse());
 
         mockMvc.perform(post("/api/v1/atenciones")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -59,51 +64,54 @@ class AtencionControllerTest {
 
     @Test
     void registrarTratamiento_debeRetornarOk() throws Exception {
-        Diagnostico diagnostico = crearDiagnostico();
-        diagnostico.setTratamiento("Antibiótico 7 días");
+        DiagnosticoResponseDTO tratamientoResponse = crearDiagnosticoResponse();
+        tratamientoResponse.setTratamiento("Antibiótico 7 días");
 
         Mockito.when(service.registrarTratamiento(eq(1L), eq("Antibiótico 7 días")))
-                .thenReturn(diagnostico);
+                .thenReturn(tratamientoResponse);
+
+        TratamientoRequestDTO tratamientoRequest = new TratamientoRequestDTO();
+        tratamientoRequest.setTratamiento("Antibiótico 7 días");
 
         mockMvc.perform(put("/api/v1/atenciones/1/tratamiento")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                Map.of("tratamiento", "Antibiótico 7 días")
-                        )))
+                        .content(objectMapper.writeValueAsString(tratamientoRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tratamiento").value("Antibiótico 7 días"));
     }
 
     @Test
     void emitirReceta_debeRetornarOk() throws Exception {
-        Diagnostico diagnostico = crearDiagnostico();
-        diagnostico.setRecetaMedica("Receta médica emitida");
+        DiagnosticoResponseDTO recetaResponse = crearDiagnosticoResponse();
+        recetaResponse.setRecetaMedica("Receta médica emitida");
 
         Mockito.when(service.emitirReceta(eq(1L), eq("Receta médica emitida")))
-                .thenReturn(diagnostico);
+                .thenReturn(recetaResponse);
+
+        RecetaRequestDTO recetaRequest = new RecetaRequestDTO();
+        recetaRequest.setRecetaMedica("Receta médica emitida");
 
         mockMvc.perform(put("/api/v1/atenciones/1/receta")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                Map.of("recetaMedica", "Receta médica emitida")
-                        )))
+                        .content(objectMapper.writeValueAsString(recetaRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.recetaMedica").value("Receta médica emitida"));
     }
 
     @Test
     void emitirCertificado_debeRetornarOk() throws Exception {
-        Diagnostico diagnostico = crearDiagnostico();
-        diagnostico.setDetalleCertificado("Certificado emitido");
+        DiagnosticoResponseDTO certificadoResponse = crearDiagnosticoResponse();
+        certificadoResponse.setDetalleCertificado("Certificado emitido");
 
         Mockito.when(service.emitirCertificado(eq(1L), eq("Certificado emitido")))
-                .thenReturn(diagnostico);
+                .thenReturn(certificadoResponse);
+
+        CertificadoRequestDTO certificadoRequest = new CertificadoRequestDTO();
+        certificadoRequest.setDetalleCertificado("Certificado emitido");
 
         mockMvc.perform(put("/api/v1/atenciones/1/certificado")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(
-                                Map.of("detalleCertificado", "Certificado emitido")
-                        )))
+                        .content(objectMapper.writeValueAsString(certificadoRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.detalleCertificado").value("Certificado emitido"));
     }
@@ -129,21 +137,18 @@ class AtencionControllerTest {
         return request;
     }
 
-    private Diagnostico crearDiagnostico() {
-        FichaClinica ficha = new FichaClinica();
-        ficha.setIdFicha(100L);
-        ficha.setIdMascota(200L);
-
-        Diagnostico diagnostico = new Diagnostico();
-        diagnostico.setIdDiagnostico(1L);
-        diagnostico.setDescripcion("Otitis leve");
-        diagnostico.setTratamiento("Limpieza y medicamento");
-        diagnostico.setRecetaMedica("Gotas óticas");
-        diagnostico.setDetalleCertificado("Certificado simple");
-        diagnostico.setFecha(LocalDateTime.now());
-        diagnostico.setIdVeterinario(10L);
-        diagnostico.setFichaClinica(ficha);
-
-        return diagnostico;
+    private DiagnosticoResponseDTO crearDiagnosticoResponse() {
+        return DiagnosticoResponseDTO.builder()
+                .idDiagnostico(1L)
+                .descripcion("Otitis leve")
+                .tratamiento("Limpieza y medicamento")
+                .recetaMedica("Gotas óticas")
+                .detalleCertificado("Certificado simple")
+                .fecha(LocalDateTime.now())
+                .idVeterinario(10L)
+                .idFicha(100L)
+                .idMascota(200L)
+                .build();
     }
+
 }

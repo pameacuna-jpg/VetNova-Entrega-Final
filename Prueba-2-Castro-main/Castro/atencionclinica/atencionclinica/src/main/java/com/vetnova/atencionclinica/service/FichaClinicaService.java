@@ -1,53 +1,44 @@
 package com.vetnova.atencionclinica.service;
 
-import com.vetnova.atencionclinica.event.EventoDominio;
+import com.vetnova.atencionclinica.dto.FichaClinicaRequestDTO;
+import com.vetnova.atencionclinica.dto.FichaClinicaResponseDTO;
+import com.vetnova.atencionclinica.event.AtencionRegistradaEvent;
 import com.vetnova.atencionclinica.exception.ResourceNotFoundException;
 import com.vetnova.atencionclinica.model.FichaClinica;
 import com.vetnova.atencionclinica.repository.FichaClinicaRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class FichaClinicaService {
 
-    // 1. Inyección por constructor obligatoria (Punto 3 del Mandato)
     private final FichaClinicaRepository repository;
     private final ApplicationEventPublisher eventPublisher;
 
-    public FichaClinicaService(FichaClinicaRepository repository, ApplicationEventPublisher eventPublisher) {
-        this.repository = repository;
-        this.eventPublisher = eventPublisher;
-    }
-
     @Transactional
-    public FichaClinica crearFicha(FichaClinica ficha) {
+    public FichaClinicaResponseDTO crearFicha(FichaClinicaRequestDTO request) {
+        FichaClinica ficha = mapToEntity(request);
         log.info("Creando ficha clínica para Mascota ID: {}", ficha.getIdMascota());
         ficha.setFechaCreacion(LocalDateTime.now());
         FichaClinica nuevaFicha = repository.save(ficha);
-        
-        // 2. Emitir evento obligatorio AtencionRegistrada (Punto 4.2 del Mandato)
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("idFicha", nuevaFicha.getIdFicha());
-        payload.put("idMascota", nuevaFicha.getIdMascota());
-        payload.put("estado", "REGISTRADA");
 
-        EventoDominio<Map<String, Object>> evento = new EventoDominio<>(
-                "AtencionRegistrada",
-                "ms-atencion-clinica",
-                payload
+        AtencionRegistradaEvent evento = new AtencionRegistradaEvent(
+                nuevaFicha.getIdFicha(),
+                nuevaFicha.getIdMascota(),
+                "REGISTRADA"
         );
         eventPublisher.publishEvent(evento);
         log.info("Evento [AtencionRegistrada] emitido exitosamente.");
 
-        return nuevaFicha;
+        return mapToResponse(nuevaFicha);
     }
 
     public List<FichaClinica> obtenerTodas() {
@@ -57,5 +48,21 @@ public class FichaClinicaService {
     public FichaClinica buscarPorId(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("La ficha clínica con ID " + id + " no existe."));
+    }
+
+    private FichaClinica mapToEntity(FichaClinicaRequestDTO request) {
+        FichaClinica ficha = new FichaClinica();
+        ficha.setIdMascota(request.getIdMascota());
+        ficha.setObservaciones(request.getObservaciones());
+        return ficha;
+    }
+
+    private FichaClinicaResponseDTO mapToResponse(FichaClinica ficha) {
+        FichaClinicaResponseDTO response = new FichaClinicaResponseDTO();
+        response.setIdFicha(ficha.getIdFicha());
+        response.setIdMascota(ficha.getIdMascota());
+        response.setFechaCreacion(ficha.getFechaCreacion());
+        response.setObservaciones(ficha.getObservaciones());
+        return response;
     }
 }

@@ -1,22 +1,29 @@
 package com.vetnova.atencionclinica.service;
 
-import com.vetnova.atencionclinica.exception.ResourceNotFoundException;
-import com.vetnova.atencionclinica.model.FichaClinica;
-import com.vetnova.atencionclinica.repository.FichaClinicaRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
-
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+
+import com.vetnova.atencionclinica.dto.FichaClinicaRequestDTO;
+import com.vetnova.atencionclinica.dto.FichaClinicaResponseDTO;
+import com.vetnova.atencionclinica.event.AtencionRegistradaEvent;
+import com.vetnova.atencionclinica.exception.ResourceNotFoundException;
+import com.vetnova.atencionclinica.model.FichaClinica;
+import com.vetnova.atencionclinica.repository.FichaClinicaRepository;
 
 @ExtendWith(MockitoExtension.class)
 class FichaClinicaServiceTest {
@@ -32,11 +39,13 @@ class FichaClinicaServiceTest {
 
     private FichaClinica ficha;
 
+    @SuppressWarnings("unused")
     @BeforeEach
     void setUp() {
         ficha = new FichaClinica();
         ficha.setIdFicha(1L);
         ficha.setIdMascota(100L);
+        ficha.setObservaciones("Observación de prueba");
     }
 
     @Test
@@ -45,13 +54,20 @@ class FichaClinicaServiceTest {
         when(repository.save(any(FichaClinica.class)))
                 .thenReturn(ficha);
 
-        FichaClinica resultado = service.crearFicha(ficha);
+        FichaClinicaRequestDTO request = new FichaClinicaRequestDTO();
+        request.setIdMascota(100L);
+        request.setObservaciones("Observación de prueba");
+
+        FichaClinicaResponseDTO resultado = service.crearFicha(request);
 
         assertNotNull(resultado);
         assertEquals(1L, resultado.getIdFicha());
+        assertEquals(100L, resultado.getIdMascota());
+        assertEquals("Observación de prueba", resultado.getObservaciones());
 
         verify(repository, times(1))
                 .save(any(FichaClinica.class));
+        verify(eventPublisher, times(1)).publishEvent(any(AtencionRegistradaEvent.class));
     }
 
     @Test
@@ -85,9 +101,10 @@ class FichaClinicaServiceTest {
         when(repository.findById(99L))
                 .thenReturn(Optional.empty());
 
-        assertThrows(
+        ResourceNotFoundException exception = assertThrows(
                 ResourceNotFoundException.class,
                 () -> service.buscarPorId(99L)
         );
+        assertEquals("La ficha clínica con ID 99 no existe.", exception.getMessage());
     }
 }

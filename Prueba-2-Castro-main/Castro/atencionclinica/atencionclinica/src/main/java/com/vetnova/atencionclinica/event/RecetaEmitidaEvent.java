@@ -5,11 +5,11 @@ import java.util.UUID;
 
 public class RecetaEmitidaEvent {
 
-    private String eventId;
-    private String eventType;
-    private String source;
-    private LocalDateTime occurredAt;
-    private Payload payload;
+    private final String eventId;
+    private final String eventType;
+    private final String source;
+    private final LocalDateTime occurredAt;
+    private final Payload payload;
 
     public RecetaEmitidaEvent(Long idDiagnostico, Long idVeterinario, Long idMascota, String recetaMedica) {
         this.eventId = UUID.randomUUID().toString();
@@ -39,11 +39,27 @@ public class RecetaEmitidaEvent {
         return payload;
     }
 
+    public Long getIdDiagnostico() {
+        return payload != null ? payload.getIdDiagnostico() : null;
+    }
+
+    public Long getIdVeterinario() {
+        return payload != null ? payload.getIdVeterinario() : null;
+    }
+
+    public Long getIdMascota() {
+        return payload != null ? payload.getIdMascota() : null;
+    }
+
+    public String getRecetaMedica() {
+        return payload != null ? payload.getRecetaMedica() : null;
+    }
+
     public static class Payload {
-        private Long idDiagnostico;
-        private Long idVeterinario;
-        private Long idMascota;
-        private String recetaMedica;
+        private final Long idDiagnostico;
+        private final Long idVeterinario;
+        private final Long idMascota;
+        private final String recetaMedica;
 
         public Payload(Long idDiagnostico, Long idVeterinario, Long idMascota, String recetaMedica) {
             this.idDiagnostico = idDiagnostico;

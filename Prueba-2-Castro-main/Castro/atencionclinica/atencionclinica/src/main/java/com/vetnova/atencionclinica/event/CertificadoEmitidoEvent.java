@@ -5,11 +5,11 @@ import java.util.UUID;
 
 public class CertificadoEmitidoEvent {
 
-    private String eventId;
-    private String eventType;
-    private String source;
-    private LocalDateTime occurredAt;
-    private Payload payload;
+    private final String eventId;
+    private final String eventType;
+    private final String source;
+    private final LocalDateTime occurredAt;
+    private final Payload payload;
 
     public CertificadoEmitidoEvent(Long idDiagnostico, Long idVeterinario, Long idMascota, String detalleCertificado) {
         this.eventId = UUID.randomUUID().toString();
@@ -39,11 +39,27 @@ public class CertificadoEmitidoEvent {
         return payload;
     }
 
+    public Long getIdDiagnostico() {
+        return payload != null ? payload.getIdDiagnostico() : null;
+    }
+
+    public Long getIdVeterinario() {
+        return payload != null ? payload.getIdVeterinario() : null;
+    }
+
+    public Long getIdMascota() {
+        return payload != null ? payload.getIdMascota() : null;
+    }
+
+    public String getDetalleCertificado() {
+        return payload != null ? payload.getDetalleCertificado() : null;
+    }
+
     public static class Payload {
-        private Long idDiagnostico;
-        private Long idVeterinario;
-        private Long idMascota;
-        private String detalleCertificado;
+        private final Long idDiagnostico;
+        private final Long idVeterinario;
+        private final Long idMascota;
+        private final String detalleCertificado;
 
         public Payload(Long idDiagnostico, Long idVeterinario, Long idMascota, String detalleCertificado) {
             this.idDiagnostico = idDiagnostico;
