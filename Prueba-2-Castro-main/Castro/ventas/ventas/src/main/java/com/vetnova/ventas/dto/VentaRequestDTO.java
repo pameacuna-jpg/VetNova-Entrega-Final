@@ -1,5 +1,6 @@
 package com.vetnova.ventas.dto;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -17,5 +18,6 @@ public class VentaRequestDTO {
     private Integer cantidad;
     
     @NotNull(message = "El monto total es obligatorio")
+    @DecimalMin(value = "0.01", message = "El monto total debe ser mayor a 0")
     private Double montoTotal;
 }

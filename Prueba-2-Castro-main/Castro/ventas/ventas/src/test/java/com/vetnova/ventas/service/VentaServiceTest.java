@@ -1,6 +1,9 @@
 package com.vetnova.ventas.service;
 
 import com.vetnova.ventas.event.EventoDominio;
+import com.vetnova.ventas.exception.BusinessException;
+import com.vetnova.ventas.exception.ResourceNotFoundException;
+import com.vetnova.ventas.exception.ServiceUnavailableException;
 import com.vetnova.ventas.model.Venta;
 import com.vetnova.ventas.repository.VentaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,6 +13,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -27,6 +35,9 @@ public class VentaServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private RestTemplate restTemplate;
+
     @InjectMocks
     private VentaService ventaService;
 
@@ -34,6 +45,7 @@ public class VentaServiceTest {
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(ventaService, "clientesServiceUrl", "http://localhost:8084");
         venta = new Venta();
         venta.setId(1L);
         venta.setIdCliente(10L);
@@ -46,6 +58,7 @@ public class VentaServiceTest {
 
     @Test
     void testRegistrarVenta_Exito() {
+        when(restTemplate.getForEntity(anyString(), eq(Object.class))).thenReturn(new org.springframework.http.ResponseEntity<>(HttpStatus.OK));
         when(ventaRepository.save(any(Venta.class))).thenReturn(venta);
 
         Venta resultado = ventaService.registrarVenta(venta);
@@ -70,6 +83,7 @@ public class VentaServiceTest {
 
     @Test
     void testRegistrarDevolucion_ExitoYEvento() {
+        venta.setEstado("PAGADA");
         when(ventaRepository.findById(1L)).thenReturn(Optional.of(venta));
         when(ventaRepository.save(any(Venta.class))).thenReturn(venta);
 
@@ -79,6 +93,47 @@ public class VentaServiceTest {
         assertEquals("DEVUELTA", resultado.getEstado());
         // Verifica que se emitió el evento DevolucionRegistrada
         verify(eventPublisher, times(1)).publishEvent(any(EventoDominio.class));
+    }
+
+    @Test
+    void procesarPago_siLaVentaYaEstaPagada_debeLanzarBusinessException() {
+        venta.setEstado("PAGADA");
+        when(ventaRepository.findById(1L)).thenReturn(Optional.of(venta));
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> ventaService.procesarPago(1L));
+
+        assertEquals("La venta ya se encuentra PAGADA.", ex.getMessage());
+        verify(ventaRepository, never()).save(any(Venta.class));
+    }
+
+    @Test
+    void registrarDevolucion_siLaVentaNoEstaPagada_debeLanzarBusinessException() {
+        when(ventaRepository.findById(1L)).thenReturn(Optional.of(venta));
+
+        BusinessException ex = assertThrows(BusinessException.class, () -> ventaService.registrarDevolucion(1L));
+
+        assertEquals("Solo se pueden devolver ventas en estado PAGADA.", ex.getMessage());
+        verify(ventaRepository, never()).save(any(Venta.class));
+    }
+
+    @Test
+    void registrarVenta_siElClienteNoExiste_debeLanzarResourceNotFoundException() {
+        when(restTemplate.getForEntity(anyString(), eq(Object.class))).thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
+
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> ventaService.registrarVenta(venta));
+
+        assertTrue(ex.getMessage().contains("cliente"));
+        verify(ventaRepository, never()).save(any(Venta.class));
+    }
+
+    @Test
+    void registrarVenta_siElServicioClientesEstaCaido_debeLanzarServiceUnavailableException() {
+        when(restTemplate.getForEntity(anyString(), eq(Object.class))).thenThrow(new ResourceAccessException("down"));
+
+        ServiceUnavailableException ex = assertThrows(ServiceUnavailableException.class, () -> ventaService.registrarVenta(venta));
+
+        assertTrue(ex.getMessage().contains("Clientes"));
+        verify(ventaRepository, never()).save(any(Venta.class));
     }
 
     @Test

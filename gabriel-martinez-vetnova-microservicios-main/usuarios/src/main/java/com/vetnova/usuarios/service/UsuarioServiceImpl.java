@@ -10,8 +10,14 @@ import com.vetnova.usuarios.repository.RolRepository;
 import com.vetnova.usuarios.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,6 +32,11 @@ public class UsuarioServiceImpl implements IUsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final RestTemplate restTemplate;
+
+    @Value("${services.sucursales.url:http://localhost:8090}")
+    private String sucursalesServiceUrl;
 
     @Override
     @Transactional
@@ -37,10 +48,12 @@ public class UsuarioServiceImpl implements IUsuarioService {
             throw new IllegalArgumentException("El email ya se encuentra registrado");
         }
 
+        validarSucursalExistente(request.getIdSucursal());
+
         Usuario usuario = Usuario.builder()
                 .nombre(request.getNombre())
                 .email(request.getEmail())
-                .password("$2a$10$SimulatedBcryptHash...")
+                .password(passwordEncoder.encode(request.getPassword()))
                 .estado("PENDIENTE_ACTIVACION")
                 .idSucursal(request.getIdSucursal())
                 .rolesAsignados(new ArrayList<>())
@@ -117,6 +130,20 @@ public class UsuarioServiceImpl implements IUsuarioService {
         return usuarioRepository.findAll().stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    private void validarSucursalExistente(Long idSucursal) {
+        String url = sucursalesServiceUrl + "/api/v1/sucursales/" + idSucursal;
+        try {
+            restTemplate.getForEntity(url, Object.class);
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                throw new ResourceNotFoundException("La sucursal con ID " + idSucursal + " no existe.");
+            }
+            throw new ResourceNotFoundException("No se pudo validar la sucursal con ID " + idSucursal + ".");
+        } catch (ResourceAccessException e) {
+            throw new com.vetnova.usuarios.exception.ServiceUnavailableException("El microservicio de Sucursales no se encuentra activo. Operación abortada por integridad.");
+        }
     }
 
     private UsuarioResponseDTO mapToResponseDTO(Usuario usuario) {

@@ -14,6 +14,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +39,12 @@ class UsuarioServiceImplTest {
     @Mock
     private RolRepository rolRepository;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private RestTemplate restTemplate;
+
     @InjectMocks
     private UsuarioServiceImpl usuarioService;
 
@@ -41,6 +53,7 @@ class UsuarioServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(usuarioService, "sucursalesServiceUrl", "http://localhost:8090");
         rolAdministrador = Rol.builder()
                 .idRol(1L)
                 .nombreRol("ADMIN")
@@ -60,6 +73,8 @@ class UsuarioServiceImplTest {
     void registrarUsuario_cuandoEmailNoExiste_debeGuardarUsuarioConRolYEstadoPendiente() {
         // Given
         when(usuarioRepository.existsByEmail("gabriel@vetnova.cl")).thenReturn(false);
+        when(restTemplate.getForEntity(anyString(), eq(Object.class))).thenReturn(new org.springframework.http.ResponseEntity<>(HttpStatus.OK));
+        when(passwordEncoder.encode("123456")).thenReturn("$2a$10$encoded");
         when(rolRepository.findById(1L)).thenReturn(Optional.of(rolAdministrador));
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> {
             Usuario usuario = invocation.getArgument(0);
@@ -82,7 +97,7 @@ class UsuarioServiceImplTest {
         ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(captor.capture());
         Usuario usuarioGuardado = captor.getValue();
-        assertEquals("$2a$10$SimulatedBcryptHash...", usuarioGuardado.getPassword());
+        assertEquals("$2a$10$encoded", usuarioGuardado.getPassword());
         assertEquals(1, usuarioGuardado.getRolesAsignados().size());
         assertSame(usuarioGuardado, usuarioGuardado.getRolesAsignados().get(0).getUsuario());
         assertEquals("ADMIN", usuarioGuardado.getRolesAsignados().get(0).getRol().getNombreRol());
@@ -100,6 +115,30 @@ class UsuarioServiceImplTest {
         assertEquals("El email ya se encuentra registrado", exception.getMessage());
         verify(usuarioRepository, never()).save(any());
         verify(rolRepository, never()).findById(anyLong());
+    }
+
+    @Test
+    void registrarUsuario_cuandoSucursalNoExiste_debeLanzarResourceNotFoundException() {
+        when(usuarioRepository.existsByEmail("gabriel@vetnova.cl")).thenReturn(false);
+        when(restTemplate.getForEntity(anyString(), eq(Object.class))).thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
+
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                () -> usuarioService.registrarUsuario(request));
+
+        assertTrue(exception.getMessage().contains("sucursal"));
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void registrarUsuario_cuandoSucursalEstaCaida_debeLanzarServiceUnavailableException() {
+        when(usuarioRepository.existsByEmail("gabriel@vetnova.cl")).thenReturn(false);
+        when(restTemplate.getForEntity(anyString(), eq(Object.class))).thenThrow(new ResourceAccessException("down"));
+
+        com.vetnova.usuarios.exception.ServiceUnavailableException exception = assertThrows(com.vetnova.usuarios.exception.ServiceUnavailableException.class,
+                () -> usuarioService.registrarUsuario(request));
+
+        assertTrue(exception.getMessage().contains("Sucursales"));
+        verify(usuarioRepository, never()).save(any());
     }
 
     @Test

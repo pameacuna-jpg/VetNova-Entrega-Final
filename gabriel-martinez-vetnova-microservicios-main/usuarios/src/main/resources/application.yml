@@ -31,3 +31,7 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
+
+services:
+  sucursales:
+    url: http://localhost:8090

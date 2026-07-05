@@ -6,6 +6,9 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,8 +25,14 @@ import com.vetnova.atencionclinica.dto.FichaClinicaRequestDTO;
 import com.vetnova.atencionclinica.dto.FichaClinicaResponseDTO;
 import com.vetnova.atencionclinica.event.AtencionRegistradaEvent;
 import com.vetnova.atencionclinica.exception.ResourceNotFoundException;
+import com.vetnova.atencionclinica.exception.ServiceUnavailableException;
 import com.vetnova.atencionclinica.model.FichaClinica;
 import com.vetnova.atencionclinica.repository.FichaClinicaRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class FichaClinicaServiceTest {
@@ -34,6 +43,9 @@ class FichaClinicaServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private RestTemplate restTemplate;
+
     @InjectMocks
     private FichaClinicaService service;
 
@@ -42,6 +54,7 @@ class FichaClinicaServiceTest {
     @SuppressWarnings("unused")
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(service, "mascotasServiceUrl", "http://localhost:8085");
         ficha = new FichaClinica();
         ficha.setIdFicha(1L);
         ficha.setIdMascota(100L);
@@ -51,6 +64,8 @@ class FichaClinicaServiceTest {
     @Test
     void crearFichaDebeGuardarCorrectamente() {
 
+        when(restTemplate.getForEntity(anyString(), eq(Object.class)))
+                .thenReturn(new org.springframework.http.ResponseEntity<>(HttpStatus.OK));
         when(repository.save(any(FichaClinica.class)))
                 .thenReturn(ficha);
 
@@ -68,6 +83,40 @@ class FichaClinicaServiceTest {
         verify(repository, times(1))
                 .save(any(FichaClinica.class));
         verify(eventPublisher, times(1)).publishEvent(any(AtencionRegistradaEvent.class));
+    }
+
+    @Test
+    void crearFicha_siLaMascotaNoExiste_debeLanzarResourceNotFoundException() {
+        when(restTemplate.getForEntity(anyString(), eq(Object.class)))
+                .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
+
+        FichaClinicaRequestDTO request = new FichaClinicaRequestDTO();
+        request.setIdMascota(100L);
+        request.setObservaciones("Observación de prueba");
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> service.crearFicha(request)
+        );
+
+        assertEquals("La mascota con ID 100 no existe.", exception.getMessage());
+    }
+
+    @Test
+    void crearFicha_siMascotasEstaCaido_debeLanzarServiceUnavailableException() {
+        when(restTemplate.getForEntity(anyString(), eq(Object.class)))
+                .thenThrow(new ResourceAccessException("down"));
+
+        FichaClinicaRequestDTO request = new FichaClinicaRequestDTO();
+        request.setIdMascota(100L);
+        request.setObservaciones("Observación de prueba");
+
+        ServiceUnavailableException exception = assertThrows(
+                ServiceUnavailableException.class,
+                () -> service.crearFicha(request)
+        );
+
+        assertTrue(exception.getMessage().contains("Mascotas"));
     }
 
     @Test

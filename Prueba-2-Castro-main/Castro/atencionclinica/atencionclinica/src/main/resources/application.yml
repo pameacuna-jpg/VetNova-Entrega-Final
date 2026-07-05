@@ -37,3 +37,7 @@ logging:
 
 notificaciones:
   url: http://localhost:8089/api/v1/notificaciones
+
+services:
+  mascotas:
+    url: http://localhost:8085
