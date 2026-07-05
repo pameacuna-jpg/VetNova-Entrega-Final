@@ -1,21 +1,33 @@
 package com.vetnova.notificaciones.dto;
 
+import com.vetnova.notificaciones.enums.CanalNotificacion;
+import com.vetnova.notificaciones.enums.PrioridadNotificacion;
+import com.vetnova.notificaciones.enums.TipoNotificacion;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class NotificacionRequestDTO {
 
-    @NotBlank(message = "El destinatario es obligatorio")
-    private String destinatario;
+    @NotNull(message = "El idCliente es obligatorio")
+    private Long idCliente;
 
     @NotBlank(message = "El mensaje es obligatorio")
+    @Size(min = 10, max = 500, message = "El mensaje debe tener entre 10 y 500 caracteres")
     private String mensaje;
 
-    @NotBlank(message = "El tipo es obligatorio")
-    private String tipo;
+    @NotNull(message = "El tipo de notificación es obligatorio")
+    private TipoNotificacion tipo;
 
-    private String canal = "EMAIL";
+    @NotNull(message = "El canal de notificación es obligatorio")
+    private CanalNotificacion canal;
 
-    private String prioridad = "MEDIA";
+    @NotNull(message = "La prioridad es obligatoria")
+    private PrioridadNotificacion prioridad;
 }

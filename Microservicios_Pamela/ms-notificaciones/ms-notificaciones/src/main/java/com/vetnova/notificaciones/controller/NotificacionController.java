@@ -2,29 +2,38 @@ package com.vetnova.notificaciones.controller;
 
 import com.vetnova.notificaciones.dto.NotificacionRequestDTO;
 import com.vetnova.notificaciones.dto.NotificacionResponseDTO;
+import com.vetnova.notificaciones.enums.EstadoNotificacion;
+import com.vetnova.notificaciones.enums.TipoNotificacion;
 import com.vetnova.notificaciones.service.NotificacionService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/notificaciones")
+@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class NotificacionController {
 
-    // 1. Declarar la dependencia como final (Buenas prácticas de diseño)
     private final NotificacionService notificacionService;
 
-    // 2. Inyección explícita a través del constructor
-    public NotificacionController(NotificacionService notificacionService) {
-        this.notificacionService = notificacionService;
+    @PostMapping
+    public ResponseEntity<NotificacionResponseDTO> crear(
+            @Valid @RequestBody NotificacionRequestDTO request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(notificacionService.crear(request));
     }
 
     @GetMapping
-    public ResponseEntity<List<NotificacionResponseDTO>> listarNotificaciones() {
-        return ResponseEntity.ok(notificacionService.listarNotificaciones());
+    public ResponseEntity<List<NotificacionResponseDTO>> listar() {
+        return ResponseEntity.ok(notificacionService.listar());
     }
 
     @GetMapping("/{id}")
@@ -32,43 +41,40 @@ public class NotificacionController {
         return ResponseEntity.ok(notificacionService.buscarPorId(id));
     }
 
-    @PostMapping
-    public ResponseEntity<NotificacionResponseDTO> crearNotificacion(
-            @Valid @RequestBody NotificacionRequestDTO notificacionRequestDTO) {
-
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(notificacionService.crearNotificacion(notificacionRequestDTO));
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<NotificacionResponseDTO> actualizarNotificacion(
-            @PathVariable Long id,
-            @Valid @RequestBody NotificacionRequestDTO notificacionRequestDTO) {
-
-        return ResponseEntity.ok(
-                notificacionService.actualizarNotificacion(id, notificacionRequestDTO)
-        );
-    }
-
-    @PatchMapping("/enviar/{id}")
-    public ResponseEntity<Void> marcarEnviada(@PathVariable Long id) {
-        notificacionService.marcarEnviada(id);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/cliente/{idCliente}")
+    public ResponseEntity<List<NotificacionResponseDTO>> buscarPorCliente(
+            @PathVariable Long idCliente
+    ) {
+        return ResponseEntity.ok(notificacionService.buscarPorCliente(idCliente));
     }
 
     @GetMapping("/estado/{estado}")
-    public ResponseEntity<List<NotificacionResponseDTO>> buscarPorEstado(@PathVariable String estado) {
+    public ResponseEntity<List<NotificacionResponseDTO>> buscarPorEstado(
+            @PathVariable EstadoNotificacion estado
+    ) {
         return ResponseEntity.ok(notificacionService.buscarPorEstado(estado));
     }
 
     @GetMapping("/tipo/{tipo}")
-    public ResponseEntity<List<NotificacionResponseDTO>> buscarPorTipo(@PathVariable String tipo) {
+    public ResponseEntity<List<NotificacionResponseDTO>> buscarPorTipo(
+            @PathVariable TipoNotificacion tipo
+    ) {
         return ResponseEntity.ok(notificacionService.buscarPorTipo(tipo));
     }
 
-    @GetMapping("/prioridad/{prioridad}")
-    public ResponseEntity<List<NotificacionResponseDTO>> buscarPorPrioridad(@PathVariable String prioridad) {
-        return ResponseEntity.ok(notificacionService.buscarPorPrioridad(prioridad));
+    @PatchMapping("/{id}/enviada")
+    public ResponseEntity<NotificacionResponseDTO> marcarComoEnviada(@PathVariable Long id) {
+        return ResponseEntity.ok(notificacionService.marcarComoEnviada(id));
+    }
+
+    @PatchMapping("/{id}/error")
+    public ResponseEntity<NotificacionResponseDTO> marcarComoError(@PathVariable Long id) {
+        return ResponseEntity.ok(notificacionService.marcarComoError(id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
+        notificacionService.eliminar(id);
+        return ResponseEntity.noContent().build();
     }
 }

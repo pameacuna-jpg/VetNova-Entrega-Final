@@ -1,113 +1,158 @@
 package com.vetnova.notificaciones.service;
 
+import com.vetnova.notificaciones.client.ClienteClient;
+import com.vetnova.notificaciones.dto.ClienteResponseDTO;
 import com.vetnova.notificaciones.dto.NotificacionRequestDTO;
 import com.vetnova.notificaciones.dto.NotificacionResponseDTO;
+import com.vetnova.notificaciones.enums.EstadoNotificacion;
+import com.vetnova.notificaciones.enums.TipoNotificacion;
+import com.vetnova.notificaciones.exception.NegocioException;
+import com.vetnova.notificaciones.exception.RecursoNoEncontradoException;
 import com.vetnova.notificaciones.model.Notificacion;
 import com.vetnova.notificaciones.repository.NotificacionRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class NotificacionService {
 
-    private static final Logger logger = 
-            LoggerFactory.getLogger(NotificacionService.class);
-
-    // 1. Declarar la dependencia como final (Buenas prácticas de diseño)
     private final NotificacionRepository notificacionRepository;
+    private final ClienteClient clienteClient;
 
-    // 2. Inyección explícita a través del constructor
-    public NotificacionService(NotificacionRepository notificacionRepository) {
-        this.notificacionRepository = notificacionRepository;
+    public NotificacionResponseDTO crear(NotificacionRequestDTO request) {
+        ClienteResponseDTO cliente = clienteClient.obtenerClientePorId(request.getIdCliente());
+
+        validarCliente(cliente);
+
+        String destinatario = obtenerDestinatarioSegunCanal(request, cliente);
+
+        Notificacion notificacion = Notificacion.builder()
+                .idCliente(cliente.getIdCliente())
+                .destinatario(destinatario)
+                .mensaje(request.getMensaje().trim())
+                .tipo(request.getTipo())
+                .canal(request.getCanal())
+                .prioridad(request.getPrioridad())
+                .estado(EstadoNotificacion.PENDIENTE)
+                .build();
+
+        Notificacion guardada = notificacionRepository.save(notificacion);
+
+        return convertirAResponse(guardada);
     }
 
-    public List<NotificacionResponseDTO> listarNotificaciones() {
+    public List<NotificacionResponseDTO> listar() {
         return notificacionRepository.findAll()
                 .stream()
-                .map(this::mapearAResponse)
+                .map(this::convertirAResponse)
                 .toList();
     }
 
     public NotificacionResponseDTO buscarPorId(Long id) {
         Notificacion notificacion = obtenerEntidadPorId(id);
-        return mapearAResponse(notificacion);
+        return convertirAResponse(notificacion);
     }
 
-    public NotificacionResponseDTO crearNotificacion(NotificacionRequestDTO dto) {
-        logger.info("Creando notificación tipo {} para destinatario {}",
-                dto.getTipo(),
-                dto.getDestinatario());
+    public List<NotificacionResponseDTO> buscarPorCliente(Long idCliente) {
+        clienteClient.obtenerClientePorId(idCliente);
 
-        Notificacion notificacion = new Notificacion();
-        notificacion.setDestinatario(dto.getDestinatario());
-        notificacion.setMensaje(dto.getMensaje());
-        notificacion.setTipo(dto.getTipo());
-        notificacion.setEstado("PENDIENTE");
-        notificacion.setCanal(dto.getCanal() != null ? dto.getCanal() : "EMAIL");
-        notificacion.setPrioridad(dto.getPrioridad() != null ? dto.getPrioridad() : "MEDIA");
-
-        Notificacion guardada = notificacionRepository.save(notificacion);
-        logger.info("Notificación registrada correctamente");
-
-        return mapearAResponse(guardada);
+        return notificacionRepository.findByIdCliente(idCliente)
+                .stream()
+                .map(this::convertirAResponse)
+                .toList();
     }
 
-    public NotificacionResponseDTO actualizarNotificacion(Long id, NotificacionRequestDTO dto) {
+    public List<NotificacionResponseDTO> buscarPorEstado(EstadoNotificacion estado) {
+        return notificacionRepository.findByEstado(estado)
+                .stream()
+                .map(this::convertirAResponse)
+                .toList();
+    }
+
+    public List<NotificacionResponseDTO> buscarPorTipo(TipoNotificacion tipo) {
+        return notificacionRepository.findByTipo(tipo)
+                .stream()
+                .map(this::convertirAResponse)
+                .toList();
+    }
+
+    public NotificacionResponseDTO marcarComoEnviada(Long id) {
         Notificacion notificacion = obtenerEntidadPorId(id);
 
-        notificacion.setDestinatario(dto.getDestinatario());
-        notificacion.setMensaje(dto.getMensaje());
-        notificacion.setTipo(dto.getTipo());
-        notificacion.setCanal(dto.getCanal() != null ? dto.getCanal() : "EMAIL");
-        notificacion.setPrioridad(dto.getPrioridad() != null ? dto.getPrioridad() : "MEDIA");
+        if (notificacion.getEstado() == EstadoNotificacion.ENVIADA) {
+            throw new NegocioException("La notificación ya se encuentra marcada como ENVIADA");
+        }
 
-        return mapearAResponse(notificacionRepository.save(notificacion));
+        notificacion.setEstado(EstadoNotificacion.ENVIADA);
+
+        return convertirAResponse(notificacionRepository.save(notificacion));
     }
 
-    public void marcarEnviada(Long id) {
+    public NotificacionResponseDTO marcarComoError(Long id) {
         Notificacion notificacion = obtenerEntidadPorId(id);
-        notificacion.setEstado("ENVIADA");
-        notificacionRepository.save(notificacion);
+
+        if (notificacion.getEstado() == EstadoNotificacion.ERROR) {
+            throw new NegocioException("La notificación ya se encuentra marcada como ERROR");
+        }
+
+        notificacion.setEstado(EstadoNotificacion.ERROR);
+
+        return convertirAResponse(notificacionRepository.save(notificacion));
     }
 
-    public List<NotificacionResponseDTO> buscarPorEstado(String estado) {
-        return notificacionRepository.findByEstadoIgnoreCase(estado)
-                .stream()
-                .map(this::mapearAResponse)
-                .toList();
-    }
-
-    public List<NotificacionResponseDTO> buscarPorTipo(String tipo) {
-        return notificacionRepository.findByTipoIgnoreCase(tipo)
-                .stream()
-                .map(this::mapearAResponse)
-                .toList();
-    }
-
-    public List<NotificacionResponseDTO> buscarPorPrioridad(String prioridad) {
-        return notificacionRepository.findByPrioridadIgnoreCase(prioridad)
-                .stream()
-                .map(this::mapearAResponse)
-                .toList();
+    public void eliminar(Long id) {
+        Notificacion notificacion = obtenerEntidadPorId(id);
+        notificacionRepository.delete(notificacion);
     }
 
     private Notificacion obtenerEntidadPorId(Long id) {
         return notificacionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Notificación no encontrada con ID: " + id));
+                .orElseThrow(() -> new RecursoNoEncontradoException(
+                        "No existe una notificación con id " + id
+                ));
     }
 
-    private NotificacionResponseDTO mapearAResponse(Notificacion notificacion) {
-        return new NotificacionResponseDTO(
-                notificacion.getIdNotificacion(),
-                notificacion.getDestinatario(),
-                notificacion.getMensaje(),
-                notificacion.getTipo(),
-                notificacion.getEstado(),
-                notificacion.getCanal(),
-                notificacion.getPrioridad()
-        );
+    private void validarCliente(ClienteResponseDTO cliente) {
+        if (cliente == null || cliente.getIdCliente() == null) {
+            throw new NegocioException("No fue posible obtener los datos del cliente");
+        }
+
+        if (cliente.getEstado() != null && !cliente.getEstado().equalsIgnoreCase("ACTIVO")) {
+            throw new NegocioException("El cliente no se encuentra activo");
+        }
+    }
+
+    private String obtenerDestinatarioSegunCanal(NotificacionRequestDTO request, ClienteResponseDTO cliente) {
+        return switch (request.getCanal()) {
+            case EMAIL -> {
+                if (cliente.getEmail() == null || cliente.getEmail().isBlank()) {
+                    throw new NegocioException("El cliente no tiene email registrado");
+                }
+                yield cliente.getEmail();
+            }
+            case SMS, WHATSAPP -> {
+                if (cliente.getTelefono() == null || cliente.getTelefono().isBlank()) {
+                    throw new NegocioException("El cliente no tiene teléfono registrado");
+                }
+                yield cliente.getTelefono();
+            }
+        };
+    }
+
+    private NotificacionResponseDTO convertirAResponse(Notificacion notificacion) {
+        return NotificacionResponseDTO.builder()
+                .idNotificacion(notificacion.getIdNotificacion())
+                .idCliente(notificacion.getIdCliente())
+                .destinatario(notificacion.getDestinatario())
+                .mensaje(notificacion.getMensaje())
+                .tipo(notificacion.getTipo())
+                .estado(notificacion.getEstado())
+                .canal(notificacion.getCanal())
+                .prioridad(notificacion.getPrioridad())
+                .fechaCreacion(notificacion.getFechaCreacion())
+                .build();
     }
 }

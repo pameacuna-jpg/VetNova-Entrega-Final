@@ -1,17 +1,17 @@
 package com.vetnova.notificaciones.repository;
 
+import com.vetnova.notificaciones.enums.EstadoNotificacion;
+import com.vetnova.notificaciones.enums.TipoNotificacion;
 import com.vetnova.notificaciones.model.Notificacion;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-
 import java.util.List;
-
 
 public interface NotificacionRepository extends JpaRepository<Notificacion, Long> {
 
-    List<Notificacion> findByEstadoIgnoreCase(String estado);
+    List<Notificacion> findByIdCliente(Long idCliente);
 
-    List<Notificacion> findByTipoIgnoreCase(String tipo);
+    List<Notificacion> findByEstado(EstadoNotificacion estado);
 
-    List<Notificacion> findByPrioridadIgnoreCase(String prioridad);
+    List<Notificacion> findByTipo(TipoNotificacion tipo);
 }
