@@ -6,8 +6,10 @@ import com.vetnova.ventas.exception.BusinessException;
 import com.vetnova.ventas.exception.ResourceNotFoundException;
 import com.vetnova.ventas.model.Venta;
 import com.vetnova.ventas.repository.VentaRepository;
+
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
@@ -20,6 +22,8 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.springframework.web.client.RestClientException;
 
 @Slf4j
 @Service
@@ -128,7 +132,7 @@ public class VentaService {
 
             log.info("Movimiento de salida enviado a Inventario para producto ID: {}", venta.getIdProducto());
 
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.warn("La venta fue pagada, pero no se pudo descontar inventario: {}", e.getMessage());
         }
     }
@@ -147,7 +151,7 @@ public class VentaService {
 
             log.info("Movimiento de entrada enviado a Inventario para producto ID: {}", venta.getIdProducto());
 
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.warn("La devolución fue registrada, pero no se pudo devolver stock a inventario: {}", e.getMessage());
         }
     }
