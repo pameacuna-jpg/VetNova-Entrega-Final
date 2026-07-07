@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-MsSucursalesAdministracionApplication<ms-sucursales-administracion>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.vetnova.sucursales.MsSucursalesAdministracionApplication",
+            "projectName": "ms-sucursales-administracion",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-MsInventarioApplication<ms-inventario>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.vetnova.inventario.MsInventarioApplication",
+            "projectName": "ms-inventario",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

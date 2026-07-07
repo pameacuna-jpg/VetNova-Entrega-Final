@@ -1,12 +1,13 @@
 package com.vetnova.sucursales.controller;
 
+import com.vetnova.sucursales.dto.ValidacionSucursalResponseDTO;
 import com.vetnova.sucursales.model.Sucursal;
 import com.vetnova.sucursales.service.SucursalService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import java.util.List;
-
+import com.vetnova.sucursales.dto.ValidacionSucursalResponseDTO;
 @RestController
 @RequestMapping("/api/v1/sucursales")
 public class SucursalController {
@@ -16,6 +17,10 @@ public class SucursalController {
 
     public SucursalController(SucursalService sucursalService) {
         this.sucursalService = sucursalService;
+    }
+    @GetMapping("/{id}/validar")
+    public ValidacionSucursalResponseDTO validarSucursal(@PathVariable Long id) {
+        return sucursalService.validarSucursal(id);
     }
 
     @GetMapping

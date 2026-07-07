@@ -1,6 +1,7 @@
 package com.vetnova.inventario.service;
 
-import com.vetnova.inventario.dto.StockBajoEvent; // Importación del evento mapeado en el paquete dto
+import com.vetnova.inventario.client.SucursalClient;
+import com.vetnova.inventario.dto.StockBajoEvent;
 import com.vetnova.inventario.model.MovimientoInventario;
 import com.vetnova.inventario.model.Producto;
 import com.vetnova.inventario.repository.MovimientoInventarioRepository;
@@ -12,31 +13,27 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/**
- * Servicio de negocio para la gestión y control de flujos de inventario.
- * Implementa el estándar CSR y la inyección inmutable por constructor exigida.
- */
 @Service
 public class MovimientoInventarioService {
 
     private static final Logger logger =
             LoggerFactory.getLogger(MovimientoInventarioService.class);
 
-    // Atributos de dependencias declarados como final (Inmutabilidad obligatoria)
     private final MovimientoInventarioRepository movimientoRepository;
     private final ProductoRepository productoRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final SucursalClient sucursalClient;
 
-    /**
-     * UN ÚNICO CONSTRUCTOR EXPLÍCITO
-     * Resuelve el error de sobrecarga ambigua y cumple con el Mandato de Alineación Técnica.
-     */
-    public MovimientoInventarioService(MovimientoInventarioRepository movimientoRepository,
-                                    ProductoRepository productoRepository,
-                                    ApplicationEventPublisher eventPublisher) {
+    public MovimientoInventarioService(
+            MovimientoInventarioRepository movimientoRepository,
+            ProductoRepository productoRepository,
+            ApplicationEventPublisher eventPublisher,
+            SucursalClient sucursalClient
+    ) {
         this.movimientoRepository = movimientoRepository;
         this.productoRepository = productoRepository;
         this.eventPublisher = eventPublisher;
+        this.sucursalClient = sucursalClient;
     }
 
     public List<MovimientoInventario> listarMovimientos() {
@@ -50,10 +47,13 @@ public class MovimientoInventarioService {
 
     public MovimientoInventario registrarMovimiento(MovimientoInventario movimiento) {
 
-        logger.info("Registrando movimiento de inventario. Producto ID: {}, Tipo: {}, Cantidad: {}",
+        logger.info("Registrando movimiento. Producto ID: {}, Sucursal ID: {}, Tipo: {}, Cantidad: {}",
                 movimiento.getIdProducto(),
+                movimiento.getIdSucursal(),
                 movimiento.getTipoMovimiento(),
                 movimiento.getCantidad());
+
+        sucursalClient.validarSucursal(movimiento.getIdSucursal());
 
         Producto producto = productoRepository.findById(movimiento.getIdProducto())
                 .orElseThrow(() -> new RuntimeException(
@@ -78,32 +78,31 @@ public class MovimientoInventarioService {
                 break;
 
             default:
-                throw new RuntimeException("Tipo de movimiento inválido");
+                throw new RuntimeException("Tipo de movimiento inválido. Use ENTRADA, SALIDA o AJUSTE");
         }
 
         productoRepository.save(producto);
 
-        logger.info("Stock actualizado para producto {}. Stock actual: {}",
+        MovimientoInventario movimientoGuardado = movimientoRepository.save(movimiento);
+
+        logger.info("Movimiento registrado. Producto: {}, Stock actual: {}",
                 producto.getNombre(),
                 producto.getStockActual());
 
-        // Evaluación del umbral crítico de abastecimiento
         if (producto.getStockActual() <= producto.getStockMinimo()) {
             publicarEventoStockBajo(producto, movimiento.getIdSucursal());
         }
 
-        return movimientoRepository.save(movimiento);
+        return movimientoGuardado;
     }
 
-    /**
-     * Despacha un evento interno asíncrono dentro del contexto de Spring.
-     * Esto elimina la dependencia síncrona muerta de RestTemplate.
-     */
     private void publicarEventoStockBajo(Producto producto, Long idSucursal) {
         try {
-            logger.warn("Emitiendo de forma desacoplada StockBajoEvent para el producto: {}", producto.getNombre());
-            
-            // Instanciación del evento DTO pasando el 'source' (this) y los datos requeridos
+            logger.warn("Stock bajo detectado. Producto: {}, Stock actual: {}, Stock mínimo: {}",
+                    producto.getNombre(),
+                    producto.getStockActual(),
+                    producto.getStockMinimo());
+
             StockBajoEvent evento = new StockBajoEvent(
                     this,
                     producto.getNombre(),
@@ -112,11 +111,10 @@ public class MovimientoInventarioService {
                     idSucursal
             );
 
-            // Uso operativo de la variable inyectada (Resuelve el warning 'is not used')
             eventPublisher.publishEvent(evento);
 
         } catch (Exception e) {
-            logger.error("Error crítico al despachar el evento de inventario: {}", e.getMessage());
+            logger.error("Error al publicar evento de stock bajo: {}", e.getMessage());
         }
     }
 

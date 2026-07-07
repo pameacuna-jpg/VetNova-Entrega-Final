@@ -1,19 +1,17 @@
 package com.vetnova.inventario.service;
 
+import com.vetnova.inventario.client.SucursalClient;
 import com.vetnova.inventario.dto.StockBajoEvent;
 import com.vetnova.inventario.model.MovimientoInventario;
 import com.vetnova.inventario.model.Producto;
 import com.vetnova.inventario.repository.MovimientoInventarioRepository;
 import com.vetnova.inventario.repository.ProductoRepository;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Arrays;
@@ -35,6 +33,9 @@ public class MovimientoInventarioServiceTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private SucursalClient sucursalClient;
 
     @InjectMocks
     private MovimientoInventarioService movimientoService;
@@ -64,11 +65,9 @@ public class MovimientoInventarioServiceTest {
 
     @Test
     void listarMovimientos_deberiaRetornarLista() {
-        when(movimientoRepository.findAll())
-                .thenReturn(Arrays.asList(movimiento));
+        when(movimientoRepository.findAll()).thenReturn(Arrays.asList(movimiento));
 
-        List<MovimientoInventario> resultado =
-                movimientoService.listarMovimientos();
+        List<MovimientoInventario> resultado = movimientoService.listarMovimientos();
 
         assertEquals(1, resultado.size());
         verify(movimientoRepository).findAll();
@@ -76,11 +75,9 @@ public class MovimientoInventarioServiceTest {
 
     @Test
     void buscarPorId_cuandoExiste_deberiaRetornarMovimiento() {
-        when(movimientoRepository.findById(1L))
-                .thenReturn(Optional.of(movimiento));
+        when(movimientoRepository.findById(1L)).thenReturn(Optional.of(movimiento));
 
-        MovimientoInventario resultado =
-                movimientoService.buscarPorId(1L);
+        MovimientoInventario resultado = movimientoService.buscarPorId(1L);
 
         assertEquals(1L, resultado.getIdMovimiento());
         verify(movimientoRepository).findById(1L);
@@ -88,8 +85,7 @@ public class MovimientoInventarioServiceTest {
 
     @Test
     void buscarPorId_cuandoNoExiste_deberiaLanzarExcepcion() {
-        when(movimientoRepository.findById(99L))
-                .thenReturn(Optional.empty());
+        when(movimientoRepository.findById(99L)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
@@ -105,19 +101,17 @@ public class MovimientoInventarioServiceTest {
         movimiento.setTipoMovimiento("ENTRADA");
         movimiento.setCantidad(5);
 
-        when(productoRepository.findById(1L))
-                .thenReturn(Optional.of(producto));
-        when(productoRepository.save(any(Producto.class)))
-                .thenReturn(producto);
-        when(movimientoRepository.save(any(MovimientoInventario.class)))
-                .thenReturn(movimiento);
+        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        when(productoRepository.save(any(Producto.class))).thenReturn(producto);
+        when(movimientoRepository.save(any(MovimientoInventario.class))).thenReturn(movimiento);
 
-        MovimientoInventario resultado =
-                movimientoService.registrarMovimiento(movimiento);
+        MovimientoInventario resultado = movimientoService.registrarMovimiento(movimiento);
 
         assertNotNull(resultado);
         assertEquals(15, producto.getStockActual());
 
+        verify(sucursalClient).validarSucursal(1L);
         verify(productoRepository).save(producto);
         verify(movimientoRepository).save(movimiento);
         verify(eventPublisher, never()).publishEvent(any(StockBajoEvent.class));
@@ -128,19 +122,17 @@ public class MovimientoInventarioServiceTest {
         movimiento.setTipoMovimiento("SALIDA");
         movimiento.setCantidad(3);
 
-        when(productoRepository.findById(1L))
-                .thenReturn(Optional.of(producto));
-        when(productoRepository.save(any(Producto.class)))
-                .thenReturn(producto);
-        when(movimientoRepository.save(any(MovimientoInventario.class)))
-                .thenReturn(movimiento);
+        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        when(productoRepository.save(any(Producto.class))).thenReturn(producto);
+        when(movimientoRepository.save(any(MovimientoInventario.class))).thenReturn(movimiento);
 
-        MovimientoInventario resultado =
-                movimientoService.registrarMovimiento(movimiento);
+        MovimientoInventario resultado = movimientoService.registrarMovimiento(movimiento);
 
         assertNotNull(resultado);
         assertEquals(7, producto.getStockActual());
 
+        verify(sucursalClient).validarSucursal(1L);
         verify(productoRepository).save(producto);
         verify(movimientoRepository).save(movimiento);
         verify(eventPublisher, never()).publishEvent(any(StockBajoEvent.class));
@@ -151,8 +143,8 @@ public class MovimientoInventarioServiceTest {
         movimiento.setTipoMovimiento("SALIDA");
         movimiento.setCantidad(20);
 
-        when(productoRepository.findById(1L))
-                .thenReturn(Optional.of(producto));
+        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
@@ -161,6 +153,7 @@ public class MovimientoInventarioServiceTest {
 
         assertEquals("Stock insuficiente para realizar la salida", exception.getMessage());
 
+        verify(sucursalClient).validarSucursal(1L);
         verify(productoRepository, never()).save(any(Producto.class));
         verify(movimientoRepository, never()).save(any(MovimientoInventario.class));
         verify(eventPublisher, never()).publishEvent(any(StockBajoEvent.class));
@@ -171,19 +164,17 @@ public class MovimientoInventarioServiceTest {
         movimiento.setTipoMovimiento("AJUSTE");
         movimiento.setCantidad(25);
 
-        when(productoRepository.findById(1L))
-                .thenReturn(Optional.of(producto));
-        when(productoRepository.save(any(Producto.class)))
-                .thenReturn(producto);
-        when(movimientoRepository.save(any(MovimientoInventario.class)))
-                .thenReturn(movimiento);
+        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        when(productoRepository.save(any(Producto.class))).thenReturn(producto);
+        when(movimientoRepository.save(any(MovimientoInventario.class))).thenReturn(movimiento);
 
-        MovimientoInventario resultado =
-                movimientoService.registrarMovimiento(movimiento);
+        MovimientoInventario resultado = movimientoService.registrarMovimiento(movimiento);
 
         assertNotNull(resultado);
         assertEquals(25, producto.getStockActual());
 
+        verify(sucursalClient).validarSucursal(1L);
         verify(productoRepository).save(producto);
         verify(movimientoRepository).save(movimiento);
         verify(eventPublisher, never()).publishEvent(any(StockBajoEvent.class));
@@ -193,16 +184,17 @@ public class MovimientoInventarioServiceTest {
     void registrarMovimiento_tipoInvalido_deberiaLanzarExcepcion() {
         movimiento.setTipoMovimiento("TRASLADO");
 
-        when(productoRepository.findById(1L))
-                .thenReturn(Optional.of(producto));
+        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
                 () -> movimientoService.registrarMovimiento(movimiento)
         );
 
-        assertEquals("Tipo de movimiento inválido", exception.getMessage());
+        assertEquals("Tipo de movimiento inválido. Use ENTRADA, SALIDA o AJUSTE", exception.getMessage());
 
+        verify(sucursalClient).validarSucursal(1L);
         verify(productoRepository, never()).save(any(Producto.class));
         verify(movimientoRepository, never()).save(any(MovimientoInventario.class));
         verify(eventPublisher, never()).publishEvent(any(StockBajoEvent.class));
@@ -210,8 +202,8 @@ public class MovimientoInventarioServiceTest {
 
     @Test
     void registrarMovimiento_productoNoExiste_deberiaLanzarExcepcion() {
-        when(productoRepository.findById(1L))
-                .thenReturn(Optional.empty());
+        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(productoRepository.findById(1L)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(
                 RuntimeException.class,
@@ -220,6 +212,7 @@ public class MovimientoInventarioServiceTest {
 
         assertEquals("Producto no encontrado con ID: 1", exception.getMessage());
 
+        verify(sucursalClient).validarSucursal(1L);
         verify(productoRepository, never()).save(any(Producto.class));
         verify(movimientoRepository, never()).save(any(MovimientoInventario.class));
         verify(eventPublisher, never()).publishEvent(any(StockBajoEvent.class));
@@ -230,27 +223,24 @@ public class MovimientoInventarioServiceTest {
         movimiento.setTipoMovimiento("SALIDA");
         movimiento.setCantidad(6);
 
-        when(productoRepository.findById(1L))
-                .thenReturn(Optional.of(producto));
-        when(productoRepository.save(any(Producto.class)))
-                .thenReturn(producto);
-        when(movimientoRepository.save(any(MovimientoInventario.class)))
-                .thenReturn(movimiento);
+        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        when(productoRepository.save(any(Producto.class))).thenReturn(producto);
+        when(movimientoRepository.save(any(MovimientoInventario.class))).thenReturn(movimiento);
 
         movimientoService.registrarMovimiento(movimiento);
 
         assertEquals(4, producto.getStockActual());
 
+        verify(sucursalClient).validarSucursal(1L);
         verify(eventPublisher).publishEvent(any(StockBajoEvent.class));
     }
 
     @Test
     void buscarPorProducto_deberiaRetornarMovimientos() {
-        when(movimientoRepository.findByIdProducto(1L))
-                .thenReturn(Arrays.asList(movimiento));
+        when(movimientoRepository.findByIdProducto(1L)).thenReturn(Arrays.asList(movimiento));
 
-        List<MovimientoInventario> resultado =
-                movimientoService.buscarPorProducto(1L);
+        List<MovimientoInventario> resultado = movimientoService.buscarPorProducto(1L);
 
         assertEquals(1, resultado.size());
         verify(movimientoRepository).findByIdProducto(1L);
@@ -258,11 +248,9 @@ public class MovimientoInventarioServiceTest {
 
     @Test
     void buscarPorSucursal_deberiaRetornarMovimientos() {
-        when(movimientoRepository.findByIdSucursal(1L))
-                .thenReturn(Arrays.asList(movimiento));
+        when(movimientoRepository.findByIdSucursal(1L)).thenReturn(Arrays.asList(movimiento));
 
-        List<MovimientoInventario> resultado =
-                movimientoService.buscarPorSucursal(1L);
+        List<MovimientoInventario> resultado = movimientoService.buscarPorSucursal(1L);
 
         assertEquals(1, resultado.size());
         verify(movimientoRepository).findByIdSucursal(1L);
@@ -273,8 +261,7 @@ public class MovimientoInventarioServiceTest {
         when(movimientoRepository.findByTipoMovimientoIgnoreCase("ENTRADA"))
                 .thenReturn(Arrays.asList(movimiento));
 
-        List<MovimientoInventario> resultado =
-                movimientoService.buscarPorTipo("ENTRADA");
+        List<MovimientoInventario> resultado = movimientoService.buscarPorTipo("ENTRADA");
 
         assertEquals(1, resultado.size());
         verify(movimientoRepository).findByTipoMovimientoIgnoreCase("ENTRADA");

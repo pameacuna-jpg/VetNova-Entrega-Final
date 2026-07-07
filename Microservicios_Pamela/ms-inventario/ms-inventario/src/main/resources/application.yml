@@ -23,6 +23,9 @@ server:
 notificaciones:
   url: http://localhost:8089/api/v1/notificaciones
 
+sucursales:
+  url: http://localhost:8090/api/v1/sucursales
+
 springdoc:
   api-docs:
     enabled: true

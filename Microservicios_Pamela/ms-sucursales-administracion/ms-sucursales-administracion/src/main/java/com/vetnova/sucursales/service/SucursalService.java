@@ -1,9 +1,10 @@
 package com.vetnova.sucursales.service;
 
+import com.vetnova.sucursales.dto.ValidacionSucursalResponseDTO;
 import com.vetnova.sucursales.model.Sucursal;
 import com.vetnova.sucursales.repository.SucursalRepository;
 import org.springframework.stereotype.Service;
-
+import com.vetnova.sucursales.dto.ValidacionSucursalResponseDTO;
 import java.util.List;
 
 @Service
@@ -54,4 +55,20 @@ public class SucursalService {
     public List<Sucursal> buscarPorCiudad(String ciudad) {
         return sucursalRepository.findByCiudadIgnoreCase(ciudad);
     }
+    public ValidacionSucursalResponseDTO validarSucursal(Long id) {
+     return sucursalRepository.findById(id)
+            .map(sucursal -> ValidacionSucursalResponseDTO.builder()
+                    .idSucursal(sucursal.getIdSucursal())
+                    .existe(true)
+                    .activa("ACTIVA".equalsIgnoreCase(sucursal.getEstado()))
+                    .mensaje("Sucursal encontrada")
+                    .build())
+            .orElse(ValidacionSucursalResponseDTO.builder()
+                    .idSucursal(id)
+                    .existe(false)
+                    .activa(false)
+                    .mensaje("Sucursal no encontrada")
+                    .build());
+    }
+
 }

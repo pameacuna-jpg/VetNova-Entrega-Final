@@ -1,17 +1,21 @@
 package com.vetnova.inventario.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
 public class ErrorResponse {
 
-    private LocalDateTime fecha;
-    private int estado;
+    private LocalDateTime timestamp;
+    private int status;
     private String error;
-    private String mensaje;
-    private String ruta;
+    private String message;
+    private String path;
 }
