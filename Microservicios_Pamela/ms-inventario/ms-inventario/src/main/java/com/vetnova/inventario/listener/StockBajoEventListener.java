@@ -34,10 +34,9 @@ public class StockBajoEventListener {
             request.setCanal("EMAIL");
             request.setPrioridad("ALTA");
 
-            restTemplate.postForObject(notificacionesUrl, request, Object.class);
+            restTemplate.postForObject(notificacionesUrl, request, Void.class);
 
-            logger.info("Notificación de stock bajo enviada correctamente para producto: {}",
-                    event.getNombreProducto());
+            logger.info("Notificación de stock bajo enviada para producto: {}", event.getNombreProducto());
 
         } catch (Exception e) {
             logger.error("Error al enviar notificación de stock bajo: {}", e.getMessage());

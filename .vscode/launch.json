@@ -1,10 +1,38 @@
 {
+    "version": "0.2.0",
     "configurations": [
+
         {
             "type": "java",
-            "name": "Spring Boot-MsSucursalesAdministracionApplication<ms-sucursales-administracion>",
+            "name": "API Gateway",
             "request": "launch",
-            "cwd": "${workspaceFolder}",
+            "mainClass": "api_gateway.ApiGatewayApplication",
+            "projectName": "api-gateway",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Inventario",
+            "request": "launch",
+            "mainClass": "com.vetnova.inventario.MsInventarioApplication",
+            "projectName": "ms-inventario",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Notificaciones",
+            "request": "launch",
+            "mainClass": "com.vetnova.notificaciones.MsNotificacionesApplication",
+            "projectName": "ms-notificaciones",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Sucursales",
+            "request": "launch",
             "mainClass": "com.vetnova.sucursales.MsSucursalesAdministracionApplication",
             "projectName": "ms-sucursales-administracion",
             "args": "",
@@ -12,13 +40,85 @@
         },
         {
             "type": "java",
-            "name": "Spring Boot-MsInventarioApplication<ms-inventario>",
+            "name": "Clientes",
             "request": "launch",
-            "cwd": "${workspaceFolder}",
-            "mainClass": "com.vetnova.inventario.MsInventarioApplication",
-            "projectName": "ms-inventario",
+            "mainClass": "com.vetnova.clientes.ClientesApplication",
+            "projectName": "clientes",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Mascotas",
+            "request": "launch",
+            "mainClass": "com.vetnova.mascotas.MascotasApplication",
+            "projectName": "mascotas",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Usuarios",
+            "request": "launch",
+            "mainClass": "com.vetnova.usuarios.UsuariosApplication",
+            "projectName": "usuarios",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Auth",
+            "request": "launch",
+            "mainClass": "com.vetnova.auth.AuthApplication",
+            "projectName": "auth",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Agenda",
+            "request": "launch",
+            "mainClass": "com.vetnova.agenda.AgendaApplication",
+            "projectName": "agenda",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Atencion Clinica",
+            "request": "launch",
+            "mainClass": "com.vetnova.atencionclinica.AtencionclinicaApplication",
+            "projectName": "atencionclinica",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Ventas",
+            "request": "launch",
+            "mainClass": "com.vetnova.ventas.VentasApplication",
+            "projectName": "ventas",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "VetNova - Levantar Todo",
+            "configurations": [
+                "Auth",
+                "Usuarios",
+                "Clientes",
+                "Mascotas",
+                "Agenda",
+                "Atencion Clinica",
+                "Ventas",
+                "Inventario",
+                "Notificaciones",
+                "Sucursales",
+                "API Gateway"
+            ],
+            "stopAll": true
         }
     ]
 }
