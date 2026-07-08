@@ -123,6 +123,7 @@ class VentaControllerTest {
         VentaRequestDTO dto = new VentaRequestDTO();
         dto.setIdCliente(10L);
         dto.setIdProducto(20L);
+        dto.setIdSucursal(1L);
         dto.setCantidad(2);
         dto.setMontoTotal(50000.0);
 
@@ -135,6 +136,7 @@ class VentaControllerTest {
         venta.setId(1L);
         venta.setIdCliente(10L);
         venta.setIdProducto(20L);
+        venta.setIdSucursal(1L);
         venta.setCantidad(2);
         venta.setMontoTotal(50000.0);
         venta.setEstado("PENDIENTE");

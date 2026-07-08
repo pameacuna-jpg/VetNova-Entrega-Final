@@ -67,10 +67,12 @@ public class DiagnosticoService {
         Diagnostico actualizado = repository.save(atencion);
 
         Long idMascota = obtenerIdMascota(actualizado);
+        Long idCliente = obtenerIdCliente(actualizado);
         RecetaEmitidaEvent evento = new RecetaEmitidaEvent(
                 actualizado.getIdDiagnostico(),
                 actualizado.getIdVeterinario(),
                 idMascota,
+                idCliente,
                 actualizado.getRecetaMedica()
         );
         eventPublisher.publishEvent(evento);
@@ -91,10 +93,12 @@ public class DiagnosticoService {
         Diagnostico actualizado = repository.save(atencion);
 
         Long idMascota = obtenerIdMascota(actualizado);
+        Long idCliente = obtenerIdCliente(actualizado);
         CertificadoEmitidoEvent evento = new CertificadoEmitidoEvent(
                 actualizado.getIdDiagnostico(),
                 actualizado.getIdVeterinario(),
                 idMascota,
+                idCliente,
                 actualizado.getDetalleCertificado()
         );
         eventPublisher.publishEvent(evento);
@@ -146,6 +150,13 @@ public class DiagnosticoService {
     private Long obtenerIdMascota(Diagnostico diagnostico) {
         if (diagnostico.getFichaClinica() != null) {
             return diagnostico.getFichaClinica().getIdMascota();
+        }
+        return null;
+    }
+
+    private Long obtenerIdCliente(Diagnostico diagnostico) {
+        if (diagnostico.getFichaClinica() != null) {
+            return diagnostico.getFichaClinica().getIdCliente();
         }
         return null;
     }

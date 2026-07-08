@@ -11,12 +11,12 @@ public class CertificadoEmitidoEvent {
     private final LocalDateTime occurredAt;
     private final Payload payload;
 
-    public CertificadoEmitidoEvent(Long idDiagnostico, Long idVeterinario, Long idMascota, String detalleCertificado) {
+    public CertificadoEmitidoEvent(Long idDiagnostico, Long idVeterinario, Long idMascota, Long idCliente, String detalleCertificado) {
         this.eventId = UUID.randomUUID().toString();
         this.eventType = "CertificadoEmitido";
         this.source = "ms-atencion-clinica";
         this.occurredAt = LocalDateTime.now();
-        this.payload = new Payload(idDiagnostico, idVeterinario, idMascota, detalleCertificado);
+        this.payload = new Payload(idDiagnostico, idVeterinario, idMascota, idCliente, detalleCertificado);
     }
 
     public String getEventId() {
@@ -51,6 +51,10 @@ public class CertificadoEmitidoEvent {
         return payload != null ? payload.getIdMascota() : null;
     }
 
+    public Long getIdCliente() {
+        return payload != null ? payload.getIdCliente() : null;
+    }
+
     public String getDetalleCertificado() {
         return payload != null ? payload.getDetalleCertificado() : null;
     }
@@ -59,12 +63,14 @@ public class CertificadoEmitidoEvent {
         private final Long idDiagnostico;
         private final Long idVeterinario;
         private final Long idMascota;
+        private final Long idCliente;
         private final String detalleCertificado;
 
-        public Payload(Long idDiagnostico, Long idVeterinario, Long idMascota, String detalleCertificado) {
+        public Payload(Long idDiagnostico, Long idVeterinario, Long idMascota, Long idCliente, String detalleCertificado) {
             this.idDiagnostico = idDiagnostico;
             this.idVeterinario = idVeterinario;
             this.idMascota = idMascota;
+            this.idCliente = idCliente;
             this.detalleCertificado = detalleCertificado;
         }
 
@@ -78,6 +84,10 @@ public class CertificadoEmitidoEvent {
 
         public Long getIdMascota() {
             return idMascota;
+        }
+
+        public Long getIdCliente() {
+            return idCliente;
         }
 
         public String getDetalleCertificado() {

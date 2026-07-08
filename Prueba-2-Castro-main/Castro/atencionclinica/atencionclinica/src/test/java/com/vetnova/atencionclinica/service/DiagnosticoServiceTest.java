@@ -47,6 +47,7 @@ class DiagnosticoServiceTest {
         FichaClinica ficha = new FichaClinica();
         ficha.setIdFicha(1L);
         ficha.setIdMascota(100L);
+        ficha.setIdCliente(55L);
 
         diagnostico = new Diagnostico();
         diagnostico.setIdDiagnostico(1L);
@@ -150,6 +151,7 @@ class DiagnosticoServiceTest {
 
         assertNotNull(captor.getValue());
         assertEquals(100L, captor.getValue().getIdMascota());
+        assertEquals(55L, captor.getValue().getIdCliente());
     }
 
     @Test
@@ -177,5 +179,6 @@ class DiagnosticoServiceTest {
 
         assertNotNull(captor.getValue());
         assertEquals(100L, captor.getValue().getIdMascota());
+        assertEquals(55L, captor.getValue().getIdCliente());
     }
 }

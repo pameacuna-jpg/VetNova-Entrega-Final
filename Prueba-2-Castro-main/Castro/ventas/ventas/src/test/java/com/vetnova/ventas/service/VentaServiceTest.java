@@ -46,10 +46,13 @@ public class VentaServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(ventaService, "clientesServiceUrl", "http://localhost:8084");
+        ReflectionTestUtils.setField(ventaService, "inventarioServiceUrl", "http://localhost:8087");
+        ReflectionTestUtils.setField(ventaService, "sucursalesServiceUrl", "http://localhost:8090");
         venta = new Venta();
         venta.setId(1L);
         venta.setIdCliente(10L);
         venta.setIdProducto(100L);
+        venta.setIdSucursal(1L);
         venta.setCantidad(2);
         venta.setMontoTotal(50000.0);
         venta.setEstado("PENDIENTE");
@@ -133,6 +136,31 @@ public class VentaServiceTest {
         ServiceUnavailableException ex = assertThrows(ServiceUnavailableException.class, () -> ventaService.registrarVenta(venta));
 
         assertTrue(ex.getMessage().contains("Clientes"));
+        verify(ventaRepository, never()).save(any(Venta.class));
+    }
+
+    @Test
+    void registrarVenta_siElProductoNoExiste_debeLanzarResourceNotFoundException() {
+        when(restTemplate.getForEntity(anyString(), eq(Object.class)))
+                .thenReturn(new org.springframework.http.ResponseEntity<>(HttpStatus.OK))
+                .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
+
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> ventaService.registrarVenta(venta));
+
+        assertTrue(ex.getMessage().contains("producto"));
+        verify(ventaRepository, never()).save(any(Venta.class));
+    }
+
+    @Test
+    void registrarVenta_siLaSucursalNoExiste_debeLanzarResourceNotFoundException() {
+        when(restTemplate.getForEntity(anyString(), eq(Object.class)))
+                .thenReturn(new org.springframework.http.ResponseEntity<>(HttpStatus.OK))
+                .thenReturn(new org.springframework.http.ResponseEntity<>(HttpStatus.OK))
+                .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
+
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> ventaService.registrarVenta(venta));
+
+        assertTrue(ex.getMessage().contains("sucursal"));
         verify(ventaRepository, never()).save(any(Venta.class));
     }
 

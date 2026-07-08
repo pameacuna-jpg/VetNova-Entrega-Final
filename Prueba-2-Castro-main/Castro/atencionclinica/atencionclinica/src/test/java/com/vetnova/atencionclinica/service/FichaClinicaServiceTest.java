@@ -64,8 +64,9 @@ class FichaClinicaServiceTest {
     @Test
     void crearFichaDebeGuardarCorrectamente() {
 
-        when(restTemplate.getForEntity(anyString(), eq(Object.class)))
-                .thenReturn(new org.springframework.http.ResponseEntity<>(HttpStatus.OK));
+        java.util.Map<String, Object> mascotaBody = java.util.Map.of("idCliente", 55L);
+        when(restTemplate.getForEntity(anyString(), eq(java.util.Map.class)))
+                .thenReturn(new org.springframework.http.ResponseEntity<>(mascotaBody, HttpStatus.OK));
         when(repository.save(any(FichaClinica.class)))
                 .thenReturn(ficha);
 
@@ -87,7 +88,7 @@ class FichaClinicaServiceTest {
 
     @Test
     void crearFicha_siLaMascotaNoExiste_debeLanzarResourceNotFoundException() {
-        when(restTemplate.getForEntity(anyString(), eq(Object.class)))
+        when(restTemplate.getForEntity(anyString(), eq(java.util.Map.class)))
                 .thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND));
 
         FichaClinicaRequestDTO request = new FichaClinicaRequestDTO();
@@ -104,7 +105,7 @@ class FichaClinicaServiceTest {
 
     @Test
     void crearFicha_siMascotasEstaCaido_debeLanzarServiceUnavailableException() {
-        when(restTemplate.getForEntity(anyString(), eq(Object.class)))
+        when(restTemplate.getForEntity(anyString(), eq(java.util.Map.class)))
                 .thenThrow(new ResourceAccessException("down"));
 
         FichaClinicaRequestDTO request = new FichaClinicaRequestDTO();

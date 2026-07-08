@@ -55,6 +55,19 @@ class AuthServiceTest {
         usuario.setEmail("admin@vetnova.cl");
         usuario.setPassword("hashed_password_desde_bd");
         usuario.setRol("ADMIN");
+        usuario.setActivo(true);
+    }
+
+    @Test
+    void procesarLogin_UsuarioInactivo_DebeLanzarExcepcion() {
+        usuario.setActivo(false);
+        when(repository.findByEmail(request.getEmail())).thenReturn(Optional.of(usuario));
+
+        assertThrows(InvalidCredentialsException.class, () -> authService.procesarLogin(request));
+
+        verify(eventPublisher, times(1)).publishEvent(any(EventoDominio.class));
+        verify(passwordEncoder, never()).matches(anyString(), anyString());
+        verify(jwtUtil, never()).generateToken(anyString());
     }
 
     @Test

@@ -2,7 +2,7 @@ package com.vetnova.agenda.dto;
 
 public class NotificacionRequest {
 
-    private String destinatario;
+    private Long idCliente;
     private String mensaje;
     private String tipo;
     private String canal;
@@ -11,20 +11,20 @@ public class NotificacionRequest {
     public NotificacionRequest() {
     }
 
-    public NotificacionRequest(String destinatario, String mensaje, String tipo, String canal, String prioridad) {
-        this.destinatario = destinatario;
+    public NotificacionRequest(Long idCliente, String mensaje, String tipo, String canal, String prioridad) {
+        this.idCliente = idCliente;
         this.mensaje = mensaje;
         this.tipo = tipo;
         this.canal = canal;
         this.prioridad = prioridad;
     }
 
-    public String getDestinatario() {
-        return destinatario;
+    public Long getIdCliente() {
+        return idCliente;
     }
 
-    public void setDestinatario(String destinatario) {
-        this.destinatario = destinatario;
+    public void setIdCliente(Long idCliente) {
+        this.idCliente = idCliente;
     }
 
     public String getMensaje() {

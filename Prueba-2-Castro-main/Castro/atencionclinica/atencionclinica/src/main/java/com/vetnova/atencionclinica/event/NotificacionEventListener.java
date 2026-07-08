@@ -26,9 +26,9 @@ public class NotificacionEventListener {
     public void handleRecetaEmitida(RecetaEmitidaEvent event) {
         try {
             NotificacionRequest request = new NotificacionRequest(
-                    "cliente-mascota-" + event.getIdMascota(),
+                    event.getIdCliente(),
                     "Se emitió una receta médica para la mascota ID: " + event.getIdMascota(),
-                    "RECETA_EMITIDA",
+                    "ATENCION_CLINICA",
                     "EMAIL",
                     "ALTA"
             );
@@ -47,9 +47,9 @@ public class NotificacionEventListener {
     public void handleCertificadoEmitido(CertificadoEmitidoEvent event) {
         try {
             NotificacionRequest request = new NotificacionRequest(
-                    "cliente-mascota-" + event.getIdMascota(),
+                    event.getIdCliente(),
                     "Se emitió un certificado clínico para la mascota ID: " + event.getIdMascota(),
-                    "CERTIFICADO_EMITIDO",
+                    "ATENCION_CLINICA",
                     "EMAIL",
                     "MEDIA"
             );

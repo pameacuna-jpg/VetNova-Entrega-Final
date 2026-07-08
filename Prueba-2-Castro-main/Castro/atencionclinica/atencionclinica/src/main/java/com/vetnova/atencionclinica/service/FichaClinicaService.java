@@ -35,9 +35,10 @@ public class FichaClinicaService {
 
     @Transactional
     public FichaClinicaResponseDTO crearFicha(FichaClinicaRequestDTO request) {
-        validarMascotaExistente(request.getIdMascota());
+        Long idClienteDueno = validarMascotaExistente(request.getIdMascota());
 
         FichaClinica ficha = mapToEntity(request);
+        ficha.setIdCliente(idClienteDueno);
         log.info("Creando ficha clínica para Mascota ID: {}", ficha.getIdMascota());
         ficha.setFechaCreacion(LocalDateTime.now());
         FichaClinica nuevaFicha = repository.save(ficha);
@@ -78,10 +79,16 @@ public class FichaClinicaService {
         return response;
     }
 
-    private void validarMascotaExistente(Long idMascota) {
+    @SuppressWarnings("unchecked")
+    private Long validarMascotaExistente(Long idMascota) {
         String url = mascotasServiceUrl + "/api/v1/mascotas/" + idMascota;
         try {
-            restTemplate.getForEntity(url, Object.class);
+            var response = restTemplate.getForEntity(url, java.util.Map.class);
+            java.util.Map<String, Object> body = response.getBody();
+            if (body != null && body.get("idCliente") != null) {
+                return Long.valueOf(body.get("idCliente").toString());
+            }
+            return null;
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
                 throw new ResourceNotFoundException("La mascota con ID " + idMascota + " no existe.");

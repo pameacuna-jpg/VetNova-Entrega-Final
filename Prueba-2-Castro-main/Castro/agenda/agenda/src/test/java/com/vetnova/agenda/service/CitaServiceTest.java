@@ -30,6 +30,7 @@ import org.springframework.web.client.RestTemplate;
 import com.vetnova.agenda.dto.CitaRequestDTO;
 import com.vetnova.agenda.dto.CitaResponseDTO;
 import com.vetnova.agenda.event.CitaAgendadaEvent;
+import com.vetnova.agenda.exception.BusinessException;
 import com.vetnova.agenda.exception.ResourceNotFoundException;
 import com.vetnova.agenda.exception.ServiceUnavailableException;
 import com.vetnova.agenda.model.Cita;
@@ -150,6 +151,7 @@ class CitaServiceTest {
         LocalDateTime nuevaFecha = LocalDateTime.now().plusDays(5);
 
         when(citaRepository.findById(1L)).thenReturn(Optional.of(cita));
+        when(citaRepository.findAll()).thenReturn(List.of(cita));
         when(citaRepository.save(any(Cita.class))).thenReturn(cita);
 
         CitaResponseDTO resultado = citaService.reprogramarHora(1L, nuevaFecha);
@@ -160,6 +162,25 @@ class CitaServiceTest {
 
         verify(citaRepository).findById(1L);
         verify(citaRepository).save(cita);
+        verify(eventPublisher).publishEvent(any(CitaAgendadaEvent.class));
+    }
+
+    @Test
+    void reprogramarHora_siHayConflictoDeHorarioConMismoVeterinario_debeLanzarBusinessException() {
+        LocalDateTime nuevaFecha = LocalDateTime.now().plusDays(5);
+
+        Cita otraCitaMismoVeterinario = new Cita();
+        otraCitaMismoVeterinario.setId(2L);
+        otraCitaMismoVeterinario.setIdVeterinario(30L);
+        otraCitaMismoVeterinario.setEstado("AGENDADA");
+        otraCitaMismoVeterinario.setFechaHora(nuevaFecha.plusMinutes(10));
+
+        when(citaRepository.findById(1L)).thenReturn(Optional.of(cita));
+        when(citaRepository.findAll()).thenReturn(List.of(cita, otraCitaMismoVeterinario));
+
+        assertThrows(BusinessException.class, () -> citaService.reprogramarHora(1L, nuevaFecha));
+
+        verify(citaRepository, org.mockito.Mockito.never()).save(any(Cita.class));
     }
 
     @Test
@@ -174,6 +195,17 @@ class CitaServiceTest {
 
         verify(citaRepository).findById(1L);
         verify(citaRepository).save(cita);
+        verify(eventPublisher).publishEvent(any(CitaAgendadaEvent.class));
+    }
+
+    @Test
+    void cancelarHora_siYaEstaCancelada_debeLanzarBusinessException() {
+        cita.setEstado("CANCELADA");
+        when(citaRepository.findById(1L)).thenReturn(Optional.of(cita));
+
+        assertThrows(BusinessException.class, () -> citaService.cancelarHora(1L));
+
+        verify(citaRepository, org.mockito.Mockito.never()).save(any(Cita.class));
     }
 
     @Test
@@ -188,6 +220,17 @@ class CitaServiceTest {
 
         verify(citaRepository).findById(1L);
         verify(citaRepository).save(cita);
+        verify(eventPublisher).publishEvent(any(CitaAgendadaEvent.class));
+    }
+
+    @Test
+    void confirmarAsistencia_siYaEstaCancelada_debeLanzarBusinessException() {
+        cita.setEstado("CANCELADA");
+        when(citaRepository.findById(1L)).thenReturn(Optional.of(cita));
+
+        assertThrows(BusinessException.class, () -> citaService.confirmarAsistencia(1L));
+
+        verify(citaRepository, org.mockito.Mockito.never()).save(any(Cita.class));
     }
 
     @Test

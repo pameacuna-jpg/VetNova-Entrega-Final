@@ -19,6 +19,7 @@ public class Venta {
 
     private Long idCliente;
     private Long idProducto;
+    private Long idSucursal;
     private Integer cantidad;
     private Double montoTotal;
     private String estado; // Posibles estados: PENDIENTE, PAGADA, DEVUELTA

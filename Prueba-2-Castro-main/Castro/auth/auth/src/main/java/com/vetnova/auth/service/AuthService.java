@@ -40,13 +40,19 @@ public class AuthService {
                     return new InvalidCredentialsException("Credenciales inválidas");
                 });
 
-        // 2. Comparar la contraseña ingresada vs el Hash BCrypt en la base de datos
+        // 2. Rechazar si el usuario está inactivo
+        if (Boolean.FALSE.equals(usuario.getActivo())) {
+            emitirEventoLoginFallido(request.getEmail(), "Usuario inactivo");
+            throw new InvalidCredentialsException("Credenciales inválidas");
+        }
+
+        // 3. Comparar la contraseña ingresada vs el Hash BCrypt en la base de datos
         if (!passwordEncoder.matches(request.getPassword(), usuario.getPassword())) {
             emitirEventoLoginFallido(request.getEmail(), "Contraseña incorrecta");
             throw new InvalidCredentialsException("Credenciales inválidas");
         }
 
-        // 3. Generar el Token JWT
+        // 4. Generar el Token JWT
         String token = jwtUtil.generateToken(usuario.getEmail());
 
         // 4. Emitir el evento asíncrono obligatorio de éxito

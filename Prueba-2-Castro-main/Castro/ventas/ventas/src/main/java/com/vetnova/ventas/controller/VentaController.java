@@ -27,6 +27,7 @@ public class VentaController {
         Venta venta = new Venta();
         venta.setIdCliente(dto.getIdCliente());
         venta.setIdProducto(dto.getIdProducto());
+        venta.setIdSucursal(dto.getIdSucursal());
         venta.setCantidad(dto.getCantidad());
         venta.setMontoTotal(dto.getMontoTotal());
 
@@ -71,6 +72,7 @@ public class VentaController {
         dto.setId(venta.getId());
         dto.setIdCliente(venta.getIdCliente());
         dto.setIdProducto(venta.getIdProducto());
+        dto.setIdSucursal(venta.getIdSucursal());
         dto.setCantidad(venta.getCantidad());
         dto.setMontoTotal(venta.getMontoTotal());
         dto.setEstado(venta.getEstado());

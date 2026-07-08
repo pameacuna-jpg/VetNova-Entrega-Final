@@ -11,12 +11,12 @@ public class RecetaEmitidaEvent {
     private final LocalDateTime occurredAt;
     private final Payload payload;
 
-    public RecetaEmitidaEvent(Long idDiagnostico, Long idVeterinario, Long idMascota, String recetaMedica) {
+    public RecetaEmitidaEvent(Long idDiagnostico, Long idVeterinario, Long idMascota, Long idCliente, String recetaMedica) {
         this.eventId = UUID.randomUUID().toString();
         this.eventType = "RecetaEmitida";
         this.source = "ms-atencion-clinica";
         this.occurredAt = LocalDateTime.now();
-        this.payload = new Payload(idDiagnostico, idVeterinario, idMascota, recetaMedica);
+        this.payload = new Payload(idDiagnostico, idVeterinario, idMascota, idCliente, recetaMedica);
     }
 
     public String getEventId() {
@@ -51,6 +51,10 @@ public class RecetaEmitidaEvent {
         return payload != null ? payload.getIdMascota() : null;
     }
 
+    public Long getIdCliente() {
+        return payload != null ? payload.getIdCliente() : null;
+    }
+
     public String getRecetaMedica() {
         return payload != null ? payload.getRecetaMedica() : null;
     }
@@ -59,12 +63,14 @@ public class RecetaEmitidaEvent {
         private final Long idDiagnostico;
         private final Long idVeterinario;
         private final Long idMascota;
+        private final Long idCliente;
         private final String recetaMedica;
 
-        public Payload(Long idDiagnostico, Long idVeterinario, Long idMascota, String recetaMedica) {
+        public Payload(Long idDiagnostico, Long idVeterinario, Long idMascota, Long idCliente, String recetaMedica) {
             this.idDiagnostico = idDiagnostico;
             this.idVeterinario = idVeterinario;
             this.idMascota = idMascota;
+            this.idCliente = idCliente;
             this.recetaMedica = recetaMedica;
         }
 
@@ -78,6 +84,10 @@ public class RecetaEmitidaEvent {
 
         public Long getIdMascota() {
             return idMascota;
+        }
+
+        public Long getIdCliente() {
+            return idCliente;
         }
 
         public String getRecetaMedica() {

@@ -40,6 +40,12 @@ public class VentaService {
     @Value("${services.clientes.url:http://localhost:8084}")
     private String clientesServiceUrl;
 
+    @Value("${services.inventario.url:http://localhost:8087}")
+    private String inventarioServiceUrl;
+
+    @Value("${services.sucursales.url:http://localhost:8090}")
+    private String sucursalesServiceUrl;
+
     public VentaService(VentaRepository ventaRepository,
                         ApplicationEventPublisher eventPublisher,
                         RestTemplate restTemplate) {
@@ -51,6 +57,8 @@ public class VentaService {
     public Venta registrarVenta(Venta venta) {
         log.info("Registrando nueva venta ID de producto: {}", venta.getIdProducto());
         validarClienteExistente(venta.getIdCliente());
+        validarProductoExistente(venta.getIdProducto());
+        validarSucursalExistente(venta.getIdSucursal());
         venta.setEstado("PENDIENTE");
         venta.setFechaVenta(LocalDateTime.now());
         return ventaRepository.save(venta);
@@ -122,7 +130,7 @@ public class VentaService {
         try {
             MovimientoInventarioRequest request = new MovimientoInventarioRequest(
                     venta.getIdProducto(),
-                    1L,
+                    venta.getIdSucursal(),
                     "SALIDA",
                     venta.getCantidad(),
                     "Salida automática por venta pagada ID: " + venta.getId()
@@ -141,7 +149,7 @@ public class VentaService {
         try {
             MovimientoInventarioRequest request = new MovimientoInventarioRequest(
                     venta.getIdProducto(),
-                    1L,
+                    venta.getIdSucursal(),
                     "ENTRADA",
                     venta.getCantidad(),
                     "Entrada automática por devolución de venta ID: " + venta.getId()
@@ -186,6 +194,34 @@ public class VentaService {
             throw new ResourceNotFoundException("No se pudo validar el cliente con ID " + idCliente + ".");
         } catch (ResourceAccessException e) {
             throw new com.vetnova.ventas.exception.ServiceUnavailableException("El microservicio de Clientes no se encuentra activo. Operación abortada por integridad.");
+        }
+    }
+
+    private void validarProductoExistente(Long idProducto) {
+        String url = inventarioServiceUrl + "/api/v1/productos/" + idProducto;
+        try {
+            restTemplate.getForEntity(url, Object.class);
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                throw new ResourceNotFoundException("El producto con ID " + idProducto + " no existe.");
+            }
+            throw new ResourceNotFoundException("No se pudo validar el producto con ID " + idProducto + ".");
+        } catch (ResourceAccessException e) {
+            throw new com.vetnova.ventas.exception.ServiceUnavailableException("El microservicio de Inventario no se encuentra activo. Operación abortada por integridad.");
+        }
+    }
+
+    private void validarSucursalExistente(Long idSucursal) {
+        String url = sucursalesServiceUrl + "/api/v1/sucursales/" + idSucursal + "/validar";
+        try {
+            restTemplate.getForEntity(url, Object.class);
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                throw new ResourceNotFoundException("La sucursal con ID " + idSucursal + " no existe.");
+            }
+            throw new ResourceNotFoundException("No se pudo validar la sucursal con ID " + idSucursal + ".");
+        } catch (ResourceAccessException e) {
+            throw new com.vetnova.ventas.exception.ServiceUnavailableException("El microservicio de Sucursales no se encuentra activo. Operación abortada por integridad.");
         }
     }
 }

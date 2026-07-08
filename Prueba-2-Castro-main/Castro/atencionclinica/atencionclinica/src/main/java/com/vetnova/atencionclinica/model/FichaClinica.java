@@ -26,6 +26,8 @@ public class FichaClinica {
     @Column(nullable = false)
     private Long idMascota; // Conexión lógica con el MS de Mascotas
 
+    private Long idCliente; // Dueño de la mascota, obtenido de la respuesta de ms-mascotas al validar
+
     private LocalDateTime fechaCreacion = LocalDateTime.now();
 
     private String observaciones;

@@ -13,12 +13,18 @@ public class CitaAgendadaEvent extends ApplicationEvent {
     private final Long idCliente;
     private final Long idMascota;
     private final LocalDateTime fechaHora;
+    private final String estado;
 
     public CitaAgendadaEvent(Object source, Long idCita, Long idCliente, Long idMascota, LocalDateTime fechaHora) {
+        this(source, idCita, idCliente, idMascota, fechaHora, "AGENDADA");
+    }
+
+    public CitaAgendadaEvent(Object source, Long idCita, Long idCliente, Long idMascota, LocalDateTime fechaHora, String estado) {
         super(source);
         this.idCita = idCita;
         this.idCliente = idCliente;
         this.idMascota = idMascota;
         this.fechaHora = fechaHora;
+        this.estado = estado;
     }
 }

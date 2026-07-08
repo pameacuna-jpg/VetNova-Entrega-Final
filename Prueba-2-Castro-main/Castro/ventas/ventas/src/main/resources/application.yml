@@ -39,3 +39,9 @@ logging:
 
 inventario:
   url: http://localhost:8087/api/v1/movimientos
+
+services:
+  inventario:
+    url: http://localhost:8087
+  sucursales:
+    url: http://localhost:8090

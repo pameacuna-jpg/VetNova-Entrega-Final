@@ -26,16 +26,27 @@ public class CitaEventListener {
         String urlNotificaciones = "http://localhost:8089/api/v1/notificaciones";
 
         try {
-            // Armamos dinámicamente el destinatario y el mensaje usando los datos del evento
-            Map<String, String> request = Map.of(
-                "destinatario", "cliente_id_" + event.getIdCliente() + "@vetnova.cl",
-                "mensaje", "Su cita para la mascota ID " + event.getIdMascota() + " quedó agendada para: " + event.getFechaHora()
+            Map<String, Object> request = Map.of(
+                "idCliente", event.getIdCliente(),
+                "mensaje", mensajePara(event),
+                "tipo", "CITA",
+                "canal", "EMAIL",
+                "prioridad", "MEDIA"
             );
-            
+
             restTemplate.postForEntity(urlNotificaciones, request, Object.class);
             log.info("Notificación enviada con éxito al ms-notificaciones.");
         } catch (RestClientException e) {
             log.error("Servicio de notificaciones fuera de línea. La cita se guardó, pero la alerta falló.");
         }
+    }
+
+    private String mensajePara(CitaAgendadaEvent event) {
+        return switch (event.getEstado()) {
+            case "REPROGRAMADA" -> "Su cita para la mascota ID " + event.getIdMascota() + " fue reprogramada para: " + event.getFechaHora();
+            case "CANCELADA" -> "Su cita para la mascota ID " + event.getIdMascota() + " fue cancelada.";
+            case "CONFIRMADA" -> "Su asistencia para la cita de la mascota ID " + event.getIdMascota() + " quedó confirmada para: " + event.getFechaHora();
+            default -> "Su cita para la mascota ID " + event.getIdMascota() + " quedó agendada para: " + event.getFechaHora();
+        };
     }
 }

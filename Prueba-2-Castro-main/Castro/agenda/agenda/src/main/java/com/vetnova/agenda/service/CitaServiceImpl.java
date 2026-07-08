@@ -14,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 import com.vetnova.agenda.dto.CitaRequestDTO;
 import com.vetnova.agenda.dto.CitaResponseDTO;
 import com.vetnova.agenda.event.CitaAgendadaEvent;
+import com.vetnova.agenda.exception.BusinessException;
 import com.vetnova.agenda.exception.ResourceNotFoundException;
 import com.vetnova.agenda.exception.ServiceUnavailableException;
 import com.vetnova.agenda.model.Cita;
@@ -43,6 +44,7 @@ public class CitaServiceImpl implements CitaService {
 
         validarRecursoExistente(clientesServiceUrl, "/api/v1/clientes/", requestDTO.getIdCliente(), "cliente");
         validarRecursoExistente(mascotasServiceUrl, "/api/v1/mascotas/", requestDTO.getIdMascota(), "mascota");
+        validarNoDobleReserva(requestDTO.getIdVeterinario(), requestDTO.getFechaHora(), null);
 
         Cita cita = new Cita();
         cita.setIdCliente(requestDTO.getIdCliente());
@@ -69,23 +71,65 @@ public class CitaServiceImpl implements CitaService {
     @Override
     public CitaResponseDTO reprogramarHora(Long id, LocalDateTime nuevaFecha) {
         Cita cita = obtenerCitaEntidad(id);
+        rechazarSiCancelada(cita);
+        validarNoDobleReserva(cita.getIdVeterinario(), nuevaFecha, cita.getId());
         cita.setFechaHora(nuevaFecha);
         cita.setEstado("REPROGRAMADA");
-        return mapToResponse(citaRepository.save(cita));
+        Cita citaGuardada = citaRepository.save(cita);
+        publicarNotificacion(citaGuardada);
+        return mapToResponse(citaGuardada);
     }
 
     @Override
     public CitaResponseDTO cancelarHora(Long id) {
         Cita cita = obtenerCitaEntidad(id);
+        rechazarSiCancelada(cita);
         cita.setEstado("CANCELADA");
-        return mapToResponse(citaRepository.save(cita));
+        Cita citaGuardada = citaRepository.save(cita);
+        publicarNotificacion(citaGuardada);
+        return mapToResponse(citaGuardada);
     }
 
     @Override
     public CitaResponseDTO confirmarAsistencia(Long id) {
         Cita cita = obtenerCitaEntidad(id);
+        rechazarSiCancelada(cita);
         cita.setEstado("CONFIRMADA");
-        return mapToResponse(citaRepository.save(cita));
+        Cita citaGuardada = citaRepository.save(cita);
+        publicarNotificacion(citaGuardada);
+        return mapToResponse(citaGuardada);
+    }
+
+    private void publicarNotificacion(Cita cita) {
+        eventPublisher.publishEvent(new CitaAgendadaEvent(
+                this,
+                cita.getId(),
+                cita.getIdCliente(),
+                cita.getIdMascota(),
+                cita.getFechaHora(),
+                cita.getEstado()
+        ));
+    }
+
+    private void rechazarSiCancelada(Cita cita) {
+        if ("CANCELADA".equals(cita.getEstado())) {
+            throw new BusinessException("La cita con ID " + cita.getId() + " ya está CANCELADA y no admite más cambios.");
+        }
+    }
+
+    private void validarNoDobleReserva(Long idVeterinario, LocalDateTime fechaHora, Long idCitaExcluida) {
+        LocalDateTime desde = fechaHora.minusMinutes(30);
+        LocalDateTime hasta = fechaHora.plusMinutes(30);
+
+        boolean existeConflicto = citaRepository.findAll().stream()
+                .filter(c -> idCitaExcluida == null || !c.getId().equals(idCitaExcluida))
+                .filter(c -> c.getIdVeterinario().equals(idVeterinario))
+                .filter(c -> "AGENDADA".equals(c.getEstado()) || "CONFIRMADA".equals(c.getEstado()))
+                .anyMatch(c -> !c.getFechaHora().isBefore(desde) && !c.getFechaHora().isAfter(hasta));
+
+        if (existeConflicto) {
+            throw new BusinessException("El veterinario ID " + idVeterinario + " ya tiene una cita AGENDADA/CONFIRMADA dentro de ±30 minutos de " + fechaHora + ".");
+        }
     }
 
     @Override

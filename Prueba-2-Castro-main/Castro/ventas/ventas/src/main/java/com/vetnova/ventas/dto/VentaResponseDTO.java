@@ -8,6 +8,7 @@ public class VentaResponseDTO {
     private Long id;
     private Long idCliente;
     private Long idProducto;
+    private Long idSucursal;
     private Integer cantidad;
     private Double montoTotal;
     private String estado;
