@@ -101,7 +101,7 @@ public class MovimientoInventarioServiceTest {
         movimiento.setTipoMovimiento("ENTRADA");
         movimiento.setCantidad(5);
 
-        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(sucursalClient.validarSucursal(1L)).thenReturn(true);
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(productoRepository.save(any(Producto.class))).thenReturn(producto);
         when(movimientoRepository.save(any(MovimientoInventario.class))).thenReturn(movimiento);
@@ -122,7 +122,7 @@ public class MovimientoInventarioServiceTest {
         movimiento.setTipoMovimiento("SALIDA");
         movimiento.setCantidad(3);
 
-        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(sucursalClient.validarSucursal(1L)).thenReturn(true);
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(productoRepository.save(any(Producto.class))).thenReturn(producto);
         when(movimientoRepository.save(any(MovimientoInventario.class))).thenReturn(movimiento);
@@ -143,7 +143,7 @@ public class MovimientoInventarioServiceTest {
         movimiento.setTipoMovimiento("SALIDA");
         movimiento.setCantidad(20);
 
-        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(sucursalClient.validarSucursal(1L)).thenReturn(true);
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
 
         RuntimeException exception = assertThrows(
@@ -164,7 +164,7 @@ public class MovimientoInventarioServiceTest {
         movimiento.setTipoMovimiento("AJUSTE");
         movimiento.setCantidad(25);
 
-        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(sucursalClient.validarSucursal(1L)).thenReturn(true);
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(productoRepository.save(any(Producto.class))).thenReturn(producto);
         when(movimientoRepository.save(any(MovimientoInventario.class))).thenReturn(movimiento);
@@ -184,7 +184,7 @@ public class MovimientoInventarioServiceTest {
     void registrarMovimiento_tipoInvalido_deberiaLanzarExcepcion() {
         movimiento.setTipoMovimiento("TRASLADO");
 
-        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(sucursalClient.validarSucursal(1L)).thenReturn(true);
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
 
         RuntimeException exception = assertThrows(
@@ -202,7 +202,7 @@ public class MovimientoInventarioServiceTest {
 
     @Test
     void registrarMovimiento_productoNoExiste_deberiaLanzarExcepcion() {
-        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(sucursalClient.validarSucursal(1L)).thenReturn(true);
         when(productoRepository.findById(1L)).thenReturn(Optional.empty());
 
         RuntimeException exception = assertThrows(
@@ -223,7 +223,7 @@ public class MovimientoInventarioServiceTest {
         movimiento.setTipoMovimiento("SALIDA");
         movimiento.setCantidad(6);
 
-        doNothing().when(sucursalClient).validarSucursal(1L);
+        when(sucursalClient.validarSucursal(1L)).thenReturn(true);
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         when(productoRepository.save(any(Producto.class))).thenReturn(producto);
         when(movimientoRepository.save(any(MovimientoInventario.class))).thenReturn(movimiento);
