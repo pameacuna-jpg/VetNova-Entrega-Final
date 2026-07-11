@@ -26,20 +26,48 @@ public class StockBajoEventListener {
 
     @EventListener
     public void manejarStockBajo(StockBajoEvent event) {
+
         try {
             NotificacionRequest request = new NotificacionRequest();
+
+            request.setDestino("INTERNA");
             request.setDestinatario("inventario@vetnova.cl");
-            request.setMensaje("ALERTA: El producto " + event.getNombreProducto() + " posee stock bajo.");
+            request.setMensaje(
+                    "ALERTA DE STOCK BAJO: El producto "
+                            + event.getNombreProducto()
+                            + " posee stock actual de "
+                            + event.getStockActual()
+                            + " unidades, con un stock mínimo de "
+                            + event.getStockMinimo()
+                            + " unidades. Sucursal ID: "
+                            + event.getIdSucursal()
+                            + "."
+            );
+
             request.setTipo("STOCK_BAJO");
             request.setCanal("EMAIL");
             request.setPrioridad("ALTA");
 
-            restTemplate.postForObject(notificacionesUrl, request, Void.class);
+            restTemplate.postForObject(
+                    notificacionesUrl,
+                    request,
+                    Object.class
+            );
 
-            logger.info("Notificación de stock bajo enviada para producto: {}", event.getNombreProducto());
+            logger.info(
+                    "Notificación interna de stock bajo enviada. Producto: {}, sucursal: {}, stock actual: {}",
+                    event.getNombreProducto(),
+                    event.getIdSucursal(),
+                    event.getStockActual()
+            );
 
         } catch (Exception e) {
-            logger.error("Error al enviar notificación de stock bajo: {}", e.getMessage());
+            logger.error(
+                    "Error al enviar notificación interna de stock bajo para el producto {}: {}",
+                    event.getNombreProducto(),
+                    e.getMessage(),
+                    e
+            );
         }
     }
 }

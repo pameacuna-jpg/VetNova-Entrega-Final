@@ -21,20 +21,52 @@ public class StockBajoNotificationListener {
     private String notificacionesUrl;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void handleStockBajo(StockBajoEvent event) {
+    public void manejarStockBajo(StockBajoEvent event) {
+
         try {
-            NotificacionRequest request = new NotificacionRequest(
-                    "inventario-sucursal-" + event.getIdSucursal(),
-                    "Stock bajo de " + event.getNombreProducto() + " (actual: " + event.getStockActual() + ", mínimo: " + event.getStockMinimo() + ")",
-                    "STOCK_BAJO",
-                    "EMAIL",
-                    "ALTA"
+            NotificacionRequest request = new NotificacionRequest();
+
+            request.setDestino("INTERNA");
+            request.setIdCliente(null);
+            request.setDestinatario("inventario@vetnova.cl");
+
+            request.setMensaje(
+                    "ALERTA DE STOCK BAJO: El producto "
+                            + event.getNombreProducto()
+                            + " tiene un stock actual de "
+                            + event.getStockActual()
+                            + " unidades y un stock mínimo de "
+                            + event.getStockMinimo()
+                            + " unidades. Sucursal ID: "
+                            + event.getIdSucursal()
+                            + "."
             );
 
-            restTemplate.postForEntity(notificacionesUrl, request, String.class);
-            log.info("Notificación de stock bajo enviada para la sucursal {}", event.getIdSucursal());
+            request.setTipo("STOCK_BAJO");
+            request.setCanal("EMAIL");
+            request.setPrioridad("ALTA");
+
+            restTemplate.postForEntity(
+                    notificacionesUrl,
+                    request,
+                    Object.class
+            );
+
+            log.info(
+                    "Notificación interna de stock bajo enviada. Producto: {}, sucursal: {}, stock actual: {}",
+                    event.getNombreProducto(),
+                    event.getIdSucursal(),
+                    event.getStockActual()
+            );
+
         } catch (Exception ex) {
-            log.warn("No se pudo enviar la notificación de stock bajo: {}", ex.getMessage());
+            log.error(
+                    "No se pudo enviar la notificación de stock bajo. Producto: {}, sucursal: {}, error: {}",
+                    event.getNombreProducto(),
+                    event.getIdSucursal(),
+                    ex.getMessage(),
+                    ex
+            );
         }
     }
 }
