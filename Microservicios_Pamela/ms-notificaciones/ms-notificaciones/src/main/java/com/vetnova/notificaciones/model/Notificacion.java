@@ -1,9 +1,6 @@
 package com.vetnova.notificaciones.model;
 
-import com.vetnova.notificaciones.enums.CanalNotificacion;
-import com.vetnova.notificaciones.enums.EstadoNotificacion;
-import com.vetnova.notificaciones.enums.PrioridadNotificacion;
-import com.vetnova.notificaciones.enums.TipoNotificacion;
+import com.vetnova.notificaciones.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,7 +20,11 @@ public class Notificacion {
     @Column(name = "id_notificacion")
     private Long idNotificacion;
 
-    @Column(name = "id_cliente", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private DestinoNotificacion destino;
+
+    @Column(name = "id_cliente")
     private Long idCliente;
 
     @Column(nullable = false, length = 120)
@@ -53,20 +54,9 @@ public class Notificacion {
 
     @PrePersist
     public void prePersist() {
-        if (estado == null) {
-            estado = EstadoNotificacion.PENDIENTE;
-        }
-
-        if (canal == null) {
-            canal = CanalNotificacion.EMAIL;
-        }
-
-        if (prioridad == null) {
-            prioridad = PrioridadNotificacion.MEDIA;
-        }
-
-        if (fechaCreacion == null) {
-            fechaCreacion = LocalDateTime.now();
-        }
+        if (estado == null) estado = EstadoNotificacion.PENDIENTE;
+        if (canal == null) canal = CanalNotificacion.EMAIL;
+        if (prioridad == null) prioridad = PrioridadNotificacion.MEDIA;
+        if (fechaCreacion == null) fechaCreacion = LocalDateTime.now();
     }
 }

@@ -1,6 +1,7 @@
 package com.vetnova.notificaciones.dto;
 
 import com.vetnova.notificaciones.enums.CanalNotificacion;
+import com.vetnova.notificaciones.enums.DestinoNotificacion;
 import com.vetnova.notificaciones.enums.PrioridadNotificacion;
 import com.vetnova.notificaciones.enums.TipoNotificacion;
 import jakarta.validation.constraints.NotBlank;
@@ -15,8 +16,12 @@ import lombok.*;
 @Builder
 public class NotificacionRequestDTO {
 
-    @NotNull(message = "El idCliente es obligatorio")
+    @NotNull(message = "El destino de la notificación es obligatorio")
+    private DestinoNotificacion destino;
+
     private Long idCliente;
+
+    private String destinatario;
 
     @NotBlank(message = "El mensaje es obligatorio")
     @Size(min = 10, max = 500, message = "El mensaje debe tener entre 10 y 500 caracteres")

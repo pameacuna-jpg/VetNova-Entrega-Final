@@ -1,9 +1,6 @@
 package com.vetnova.notificaciones.dto;
 
-import com.vetnova.notificaciones.enums.CanalNotificacion;
-import com.vetnova.notificaciones.enums.EstadoNotificacion;
-import com.vetnova.notificaciones.enums.PrioridadNotificacion;
-import com.vetnova.notificaciones.enums.TipoNotificacion;
+import com.vetnova.notificaciones.enums.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -16,6 +13,7 @@ import java.time.LocalDateTime;
 public class NotificacionResponseDTO {
 
     private Long idNotificacion;
+    private DestinoNotificacion destino;
     private Long idCliente;
     private String destinatario;
     private String mensaje;
