@@ -40,6 +40,9 @@ logging:
 inventario:
   url: http://localhost:8087/api/v1/movimientos
 
+notificaciones:
+  url: http://localhost:8089/api/v1/notificaciones
+
 services:
   inventario:
     url: http://localhost:8087

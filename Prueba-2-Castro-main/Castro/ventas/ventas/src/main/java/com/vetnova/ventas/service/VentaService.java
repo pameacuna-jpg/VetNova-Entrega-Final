@@ -1,5 +1,6 @@
 package com.vetnova.ventas.service;
 
+import com.vetnova.ventas.dto.ConsumoInventarioRequest;
 import com.vetnova.ventas.dto.MovimientoInventarioRequest;
 import com.vetnova.ventas.event.EventoDominio;
 import com.vetnova.ventas.exception.BusinessException;
@@ -46,6 +47,9 @@ public class VentaService {
     @Value("${services.sucursales.url:http://localhost:8090}")
     private String sucursalesServiceUrl;
 
+    @Value("${notificaciones.url:http://localhost:8089/api/v1/notificaciones}")
+    private String notificacionesUrl;
+
     public VentaService(VentaRepository ventaRepository,
                         ApplicationEventPublisher eventPublisher,
                         RestTemplate restTemplate) {
@@ -57,7 +61,7 @@ public class VentaService {
     public Venta registrarVenta(Venta venta) {
         log.info("Registrando nueva venta ID de producto: {}", venta.getIdProducto());
         validarClienteExistente(venta.getIdCliente());
-        validarProductoExistente(venta.getIdProducto());
+        validarDisponibilidadProducto(venta.getIdProducto(), venta.getCantidad());
         validarSucursalExistente(venta.getIdSucursal());
         venta.setEstado("PENDIENTE");
         venta.setFechaVenta(LocalDateTime.now());
@@ -93,7 +97,8 @@ public class VentaService {
 
         eventPublisher.publishEvent(eventoVenta);
 
-        enviarMovimientoSalidaInventario(ventaPagada);
+        enviarConsumoInventario(ventaPagada);
+        notificarVentaPagada(ventaPagada);
 
         log.info("Venta pagada, eventos emitidos e inventario actualizado.");
 
@@ -126,22 +131,42 @@ public class VentaService {
         return ventaDevuelta;
     }
 
-    private void enviarMovimientoSalidaInventario(Venta venta) {
+    private void enviarConsumoInventario(Venta venta) {
         try {
-            MovimientoInventarioRequest request = new MovimientoInventarioRequest(
+            ConsumoInventarioRequest request = new ConsumoInventarioRequest(
                     venta.getIdProducto(),
                     venta.getIdSucursal(),
-                    "SALIDA",
                     venta.getCantidad(),
-                    "Salida automática por venta pagada ID: " + venta.getId()
+                    "VENTA",
+                    venta.getId(),
+                    "Venta Nº" + venta.getId()
             );
 
-            restTemplate.postForEntity(inventarioUrl, request, String.class);
+            restTemplate.postForEntity(inventarioServiceUrl + "/api/v1/inventario/consumos", request, Object.class);
 
-            log.info("Movimiento de salida enviado a Inventario para producto ID: {}", venta.getIdProducto());
+            log.info("Consumo de inventario registrado para producto ID: {}", venta.getIdProducto());
 
         } catch (RestClientException e) {
-            log.warn("La venta fue pagada, pero no se pudo descontar inventario: {}", e.getMessage());
+            log.warn("La venta fue pagada, pero no se pudo registrar el consumo en inventario: {}", e.getMessage());
+        }
+    }
+
+    private void notificarVentaPagada(Venta venta) {
+        try {
+            Map<String, Object> request = new HashMap<>();
+            request.put("destino", "CLIENTE");
+            request.put("idCliente", venta.getIdCliente());
+            request.put("mensaje", "Tu compra fue procesada correctamente. Venta Nº" + venta.getId());
+            request.put("tipo", "VENTA");
+            request.put("canal", "EMAIL");
+            request.put("prioridad", "MEDIA");
+
+            restTemplate.postForEntity(notificacionesUrl, request, Object.class);
+
+            log.info("Notificación de venta pagada enviada para venta ID: {}", venta.getId());
+
+        } catch (RestClientException e) {
+            log.warn("La venta fue pagada, pero no se pudo notificar al cliente: {}", e.getMessage());
         }
     }
 
@@ -197,10 +222,22 @@ public class VentaService {
         }
     }
 
-    private void validarProductoExistente(Long idProducto) {
-        String url = inventarioServiceUrl + "/api/v1/productos/" + idProducto;
+    @SuppressWarnings("unchecked")
+    private void validarDisponibilidadProducto(Long idProducto, Integer cantidad) {
+        String url = inventarioServiceUrl + "/api/v1/inventario/disponibilidad/" + idProducto + "?cantidad=" + cantidad;
         try {
-            restTemplate.getForEntity(url, Object.class);
+            var response = restTemplate.getForEntity(url, Map.class);
+            Map<String, Object> body = response.getBody();
+
+            boolean disponible = body != null && Boolean.TRUE.equals(body.get("disponible"));
+            boolean activo = body != null && Boolean.TRUE.equals(body.get("activo"));
+
+            if (!disponible || !activo) {
+                String mensaje = body != null && body.get("mensaje") != null
+                        ? body.get("mensaje").toString()
+                        : "El producto con ID " + idProducto + " no está disponible.";
+                throw new BusinessException(mensaje);
+            }
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
                 throw new ResourceNotFoundException("El producto con ID " + idProducto + " no existe.");

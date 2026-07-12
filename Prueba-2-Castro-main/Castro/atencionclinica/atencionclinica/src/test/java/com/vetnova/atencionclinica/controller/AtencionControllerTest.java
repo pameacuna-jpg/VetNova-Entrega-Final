@@ -85,7 +85,7 @@ class AtencionControllerTest {
         DiagnosticoResponseDTO recetaResponse = crearDiagnosticoResponse();
         recetaResponse.setRecetaMedica("Receta médica emitida");
 
-        Mockito.when(service.emitirReceta(eq(1L), eq("Receta médica emitida")))
+        Mockito.when(service.emitirReceta(eq(1L), any(RecetaRequestDTO.class)))
                 .thenReturn(recetaResponse);
 
         RecetaRequestDTO recetaRequest = new RecetaRequestDTO();

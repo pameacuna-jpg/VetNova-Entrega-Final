@@ -2,6 +2,7 @@ package com.vetnova.atencionclinica.dto;
 
 public class NotificacionRequest {
 
+    private String destino;
     private Long idCliente;
     private String mensaje;
     private String tipo;
@@ -11,12 +12,21 @@ public class NotificacionRequest {
     public NotificacionRequest() {
     }
 
-    public NotificacionRequest(Long idCliente, String mensaje, String tipo, String canal, String prioridad) {
+    public NotificacionRequest(String destino, Long idCliente, String mensaje, String tipo, String canal, String prioridad) {
+        this.destino = destino;
         this.idCliente = idCliente;
         this.mensaje = mensaje;
         this.tipo = tipo;
         this.canal = canal;
         this.prioridad = prioridad;
+    }
+
+    public String getDestino() {
+        return destino;
+    }
+
+    public void setDestino(String destino) {
+        this.destino = destino;
     }
 
     public Long getIdCliente() {

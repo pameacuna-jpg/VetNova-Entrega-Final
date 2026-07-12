@@ -40,3 +40,6 @@ logging:
 jwt:
   secret: vetnova_auth_secret_key_2026_segura_para_desarrollo
   expiration: 3600000
+
+notificaciones:
+  url: http://localhost:8089/api/v1/notificaciones

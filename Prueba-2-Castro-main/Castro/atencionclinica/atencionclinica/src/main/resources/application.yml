@@ -41,3 +41,5 @@ notificaciones:
 services:
   mascotas:
     url: http://localhost:8085
+  inventario:
+    url: http://localhost:8087

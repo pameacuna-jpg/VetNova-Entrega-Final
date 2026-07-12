@@ -27,6 +27,7 @@ public class CitaEventListener {
 
         try {
             Map<String, Object> request = Map.of(
+                "destino", "CLIENTE",
                 "idCliente", event.getIdCliente(),
                 "mensaje", mensajePara(event),
                 "tipo", "CITA",

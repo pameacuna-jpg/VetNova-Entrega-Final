@@ -7,9 +7,12 @@ import com.vetnova.auth.repository.AuthUsuarioRepository;
 import com.vetnova.auth.security.JwtUtil;
 import com.vetnova.auth.event.EventoDominio;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,12 +25,18 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final ApplicationEventPublisher eventPublisher;
+    private final RestTemplate restTemplate;
 
-    public AuthService(AuthUsuarioRepository repository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, ApplicationEventPublisher eventPublisher) {
+    @Value("${notificaciones.url:http://localhost:8089/api/v1/notificaciones}")
+    private String notificacionesUrl;
+
+    public AuthService(AuthUsuarioRepository repository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil,
+                        ApplicationEventPublisher eventPublisher, RestTemplate restTemplate) {
         this.repository = repository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.eventPublisher = eventPublisher;
+        this.restTemplate = restTemplate;
     }
 
     public String procesarLogin(LoginRequest request) {
@@ -67,6 +76,8 @@ public class AuthService {
         );
         eventPublisher.publishEvent(eventoExito);
 
+        notificarInterna(usuario.getEmail(), "Se inició sesión correctamente en VetNova.", "MEDIA");
+
         log.info("Autenticación exitosa. Token generado para: {}", usuario.getEmail());
         return token;
     }
@@ -83,6 +94,27 @@ public class AuthService {
                 payload
         );
         eventPublisher.publishEvent(eventoFallo);
+
+        notificarInterna(email, "Intento de inicio de sesión fallido: " + razon, "ALTA");
+    }
+
+    private void notificarInterna(String destinatario, String mensaje, String prioridad) {
+        try {
+            Map<String, Object> request = new HashMap<>();
+            request.put("destino", "INTERNA");
+            request.put("idCliente", null);
+            request.put("destinatario", destinatario);
+            request.put("mensaje", mensaje);
+            request.put("tipo", "SISTEMA");
+            request.put("canal", "EMAIL");
+            request.put("prioridad", prioridad);
+
+            restTemplate.postForEntity(notificacionesUrl, request, Object.class);
+
+            log.info("Notificación interna enviada para: {}", destinatario);
+        } catch (RestClientException e) {
+            log.warn("No se pudo enviar la notificación interna para {}: {}", destinatario, e.getMessage());
+        }
     }
 
     public String recuperarContrasena(String email) {
@@ -102,6 +134,8 @@ public class AuthService {
         nuevoUsuario.setFechaCreacion(java.time.LocalDateTime.now());
 
         repository.save(nuevoUsuario);
+
+        notificarInterna(nuevoUsuario.getEmail(), "Se registró una nueva cuenta de personal en VetNova.", "MEDIA");
 
         // Retornamos el DTO como espera el controlador
         com.vetnova.auth.dto.AuthResponse response = new com.vetnova.auth.dto.AuthResponse();

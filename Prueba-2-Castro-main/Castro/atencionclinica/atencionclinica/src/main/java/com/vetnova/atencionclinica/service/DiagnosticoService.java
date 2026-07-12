@@ -6,16 +6,27 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.vetnova.atencionclinica.dto.ConsumoInventarioRequest;
 import com.vetnova.atencionclinica.dto.DiagnosticoRequestDTO;
 import com.vetnova.atencionclinica.dto.DiagnosticoResponseDTO;
+import com.vetnova.atencionclinica.dto.RecetaRequestDTO;
 import com.vetnova.atencionclinica.event.CertificadoEmitidoEvent;
 import com.vetnova.atencionclinica.event.RecetaEmitidaEvent;
+import com.vetnova.atencionclinica.exception.BusinessException;
 import com.vetnova.atencionclinica.exception.ResourceNotFoundException;
+import com.vetnova.atencionclinica.exception.ServiceUnavailableException;
 import com.vetnova.atencionclinica.model.Diagnostico;
 import com.vetnova.atencionclinica.model.FichaClinica;
 import com.vetnova.atencionclinica.repository.DiagnosticoRepository;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +36,12 @@ public class DiagnosticoService {
 
     private final DiagnosticoRepository repository;
     private final ApplicationEventPublisher eventPublisher;
+    private final RestTemplate restTemplate;
+
+    @Value("${services.inventario.url:http://localhost:8087}")
+    private String inventarioServiceUrl;
+
+    private static final Long ID_SUCURSAL_POR_DEFECTO = 1L; // Decisión: atencionclinica no maneja sucursal propia aún; se usa la sucursal principal hasta que exista el vínculo (ver punto opcional Agenda→Sucursales)
 
     @Transactional(readOnly = true)
     public DiagnosticoResponseDTO buscarPorId(Long id) {
@@ -59,12 +76,16 @@ public class DiagnosticoService {
     }
 
     @Transactional
-    public DiagnosticoResponseDTO emitirReceta(Long id, String receta) {
+    public DiagnosticoResponseDTO emitirReceta(Long id, RecetaRequestDTO request) {
         Diagnostico atencion = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("La atención con ID " + id + " no existe."));
 
-        atencion.setRecetaMedica(receta);
+        atencion.setRecetaMedica(request.getRecetaMedica());
         Diagnostico actualizado = repository.save(atencion);
+
+        if (request.getIdProducto() != null) {
+            descontarInsumo(actualizado, request.getIdProducto(), request.getCantidad());
+        }
 
         Long idMascota = obtenerIdMascota(actualizado);
         Long idCliente = obtenerIdCliente(actualizado);
@@ -82,6 +103,51 @@ public class DiagnosticoService {
                 idMascota);
 
         return mapToResponse(actualizado);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void descontarInsumo(Diagnostico diagnostico, Long idProducto, Integer cantidad) {
+        int cantidadAConsumir = cantidad != null ? cantidad : 1;
+
+        String urlDisponibilidad = inventarioServiceUrl + "/api/v1/inventario/disponibilidad/" + idProducto + "?cantidad=" + cantidadAConsumir;
+        try {
+            var response = restTemplate.getForEntity(urlDisponibilidad, Map.class);
+            Map<String, Object> body = response.getBody();
+
+            boolean disponible = body != null && Boolean.TRUE.equals(body.get("disponible"));
+            boolean activo = body != null && Boolean.TRUE.equals(body.get("activo"));
+
+            if (!disponible || !activo) {
+                String mensaje = body != null && body.get("mensaje") != null
+                        ? body.get("mensaje").toString()
+                        : "El insumo con ID " + idProducto + " no está disponible.";
+                throw new BusinessException(mensaje);
+            }
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == org.springframework.http.HttpStatus.NOT_FOUND) {
+                throw new ResourceNotFoundException("El insumo con ID " + idProducto + " no existe.");
+            }
+            throw new ResourceNotFoundException("No se pudo validar el insumo con ID " + idProducto + ".");
+        } catch (ResourceAccessException e) {
+            throw new ServiceUnavailableException("El microservicio de Inventario no se encuentra activo. Operación abortada por integridad.");
+        }
+
+        ConsumoInventarioRequest consumo = new ConsumoInventarioRequest(
+                idProducto,
+                ID_SUCURSAL_POR_DEFECTO,
+                cantidadAConsumir,
+                "ATENCION_CLINICA",
+                diagnostico.getIdDiagnostico(),
+                "Consumo por receta emitida en diagnóstico Nº" + diagnostico.getIdDiagnostico()
+        );
+
+        try {
+            restTemplate.postForEntity(inventarioServiceUrl + "/api/v1/inventario/consumos", consumo, Object.class);
+        } catch (HttpClientErrorException e) {
+            throw new BusinessException("No se pudo registrar el consumo del insumo con ID " + idProducto + ": " + e.getMessage());
+        } catch (ResourceAccessException e) {
+            throw new ServiceUnavailableException("El microservicio de Inventario no se encuentra activo. Operación abortada por integridad.");
+        }
     }
 
     @Transactional

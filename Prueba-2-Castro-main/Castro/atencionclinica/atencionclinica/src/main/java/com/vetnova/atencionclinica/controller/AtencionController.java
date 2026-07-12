@@ -55,7 +55,7 @@ public class AtencionController {
             @PathVariable Long id,
             @Valid @RequestBody RecetaRequestDTO request) {
 
-        DiagnosticoResponseDTO response = service.emitirReceta(id, request.getRecetaMedica());
+        DiagnosticoResponseDTO response = service.emitirReceta(id, request);
         return ResponseEntity.ok(response);
     }
 
