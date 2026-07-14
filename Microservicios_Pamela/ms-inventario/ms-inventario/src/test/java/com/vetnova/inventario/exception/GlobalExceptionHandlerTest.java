@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -81,5 +82,77 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response.getBody());
         assertEquals(503, response.getBody().getStatus());
         assertEquals("Microservicio no disponible", response.getBody().getError());
+    }
+
+    @Test
+    void manejarResourceAccess_debeRetornarServiceUnavailable() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/v1/movimientos");
+
+        org.springframework.web.client.ResourceAccessException ex =
+                new org.springframework.web.client.ResourceAccessException("Connection refused");
+
+        ResponseEntity<ErrorResponse> response =
+                handler.manejarResourceAccess(ex, request);
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(503, response.getBody().getStatus());
+        assertEquals("Microservicio no disponible", response.getBody().getError());
+        assertEquals("No fue posible comunicarse con otro microservicio", response.getBody().getMessage());
+    }
+
+    @Test
+    void manejarValidaciones_debeRetornarBadRequestConMensajesConcatenados() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/v1/productos");
+
+        org.springframework.validation.BindingResult bindingResult =
+                mock(org.springframework.validation.BindingResult.class);
+        org.springframework.validation.FieldError fieldError =
+                new org.springframework.validation.FieldError("productoRequestDTO", "nombre", "El nombre es obligatorio");
+        when(bindingResult.getFieldErrors()).thenReturn(java.util.List.of(fieldError));
+
+        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
+        when(ex.getBindingResult()).thenReturn(bindingResult);
+
+        ResponseEntity<ErrorResponse> response =
+                handler.manejarValidaciones(ex, request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(400, response.getBody().getStatus());
+        assertEquals("nombre: El nombre es obligatorio", response.getBody().getMessage());
+    }
+
+    @Test
+    void manejarExceptionGeneral_debeRetornarInternalServerError() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/v1/productos");
+
+        Exception ex = new Exception("Fallo inesperado");
+
+        ResponseEntity<ErrorResponse> response =
+                handler.manejarExceptionGeneral(ex, request);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(500, response.getBody().getStatus());
+        assertEquals("Ocurrió un error inesperado en Inventario: Fallo inesperado", response.getBody().getMessage());
+    }
+
+    @Test
+    void manejarRuntimeException_debeRetornarBadRequestCuandoMensajeDiceTipoInvalido() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/v1/movimientos");
+
+        RuntimeException ex = new RuntimeException("Tipo de movimiento inválido");
+
+        ResponseEntity<ErrorResponse> response =
+                handler.manejarRuntimeException(ex, request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(400, response.getBody().getStatus());
     }
 }
