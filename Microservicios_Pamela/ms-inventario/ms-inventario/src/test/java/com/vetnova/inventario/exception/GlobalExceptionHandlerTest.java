@@ -1,14 +1,17 @@
 package com.vetnova.inventario.exception;
 
-import com.vetnova.inventario.dto.ErrorResponse;
-import jakarta.servlet.http.HttpServletRequest;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.junit.jupiter.api.Test;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import com.vetnova.inventario.dto.ErrorResponse;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 class GlobalExceptionHandlerTest {
 
@@ -147,6 +150,41 @@ class GlobalExceptionHandlerTest {
         when(request.getRequestURI()).thenReturn("/api/v1/movimientos");
 
         RuntimeException ex = new RuntimeException("Tipo de movimiento inválido");
+
+        ResponseEntity<ErrorResponse> response =
+                handler.manejarRuntimeException(ex, request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(400, response.getBody().getStatus());
+    }
+
+    // =========================================================================
+    // TESTS NUEVOS: ramas de determinarStatus() no cubiertas
+    // =========================================================================
+
+    @Test
+    void manejarRuntimeException_conMensajeSinPalabraClave_debeRetornarBadRequestPorDefecto() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/v1/movimientos");
+
+        RuntimeException ex = new RuntimeException("Error de negocio genérico");
+
+        ResponseEntity<ErrorResponse> response =
+                handler.manejarRuntimeException(ex, request);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(400, response.getBody().getStatus());
+        assertEquals("Error en la solicitud", response.getBody().getError());
+    }
+
+    @Test
+    void manejarRuntimeException_conMensajeNulo_debeRetornarBadRequest() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/v1/movimientos");
+
+        RuntimeException ex = new RuntimeException((String) null);
 
         ResponseEntity<ErrorResponse> response =
                 handler.manejarRuntimeException(ex, request);

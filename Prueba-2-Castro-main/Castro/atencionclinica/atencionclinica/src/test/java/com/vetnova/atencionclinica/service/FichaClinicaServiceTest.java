@@ -157,4 +157,43 @@ class FichaClinicaServiceTest {
         );
         assertEquals("La ficha clínica con ID 99 no existe.", exception.getMessage());
     }
+
+    // =========================================================================
+    // TESTS NUEVOS
+    // =========================================================================
+
+    // ---- validarMascotaExistente: error distinto a 404 ----
+    @Test
+    void crearFicha_siMascotasResponde500_debeLanzarResourceNotFoundException() {
+        when(restTemplate.getForEntity(anyString(), eq(java.util.Map.class)))
+                .thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
+
+        FichaClinicaRequestDTO request = new FichaClinicaRequestDTO();
+        request.setIdMascota(100L);
+        request.setObservaciones("Observación de prueba");
+
+        ResourceNotFoundException exception = assertThrows(
+                ResourceNotFoundException.class,
+                () -> service.crearFicha(request)
+        );
+
+        assertEquals("No se pudo validar la mascota con ID 100.", exception.getMessage());
+    }
+
+    // ---- validarMascotaExistente: body sin idCliente (rama return null) ----
+    @Test
+    void crearFicha_siMascotaSinIdCliente_debeGuardarConIdClienteNulo() {
+        when(restTemplate.getForEntity(anyString(), eq(java.util.Map.class)))
+                .thenReturn(new org.springframework.http.ResponseEntity<>(java.util.Map.of(), HttpStatus.OK));
+        when(repository.save(any(FichaClinica.class))).thenReturn(ficha);
+
+        FichaClinicaRequestDTO request = new FichaClinicaRequestDTO();
+        request.setIdMascota(100L);
+        request.setObservaciones("Observación de prueba");
+
+        FichaClinicaResponseDTO resultado = service.crearFicha(request);
+
+        assertNotNull(resultado);
+        verify(repository).save(any(FichaClinica.class));
+    }
 }
