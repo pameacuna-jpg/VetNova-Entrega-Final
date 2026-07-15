@@ -129,6 +129,22 @@ GET /api/v1/notificaciones/{id}
 
 ---
 
+### Proveedores
+
+GET /api/v1/proveedores
+
+GET /api/v1/proveedores/{id}
+
+POST /api/v1/proveedores
+
+PUT /api/v1/proveedores/{id}
+
+DELETE /api/v1/proveedores/{id}
+
+GET /api/v1/proveedores/buscar/{nombre}
+
+---
+
 ### Sucursales
 
 GET /api/v1/sucursales
