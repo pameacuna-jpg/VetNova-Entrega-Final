@@ -2,6 +2,9 @@ spring:
   application:
     name: auth-service
 
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
   datasource:
     # URL corregida al nombre oficial: vetnova_auth
     url: jdbc:mysql://localhost:3306/vetnova_auth?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
@@ -12,7 +15,7 @@ spring:
   jpa:
     show-sql: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
@@ -37,9 +40,42 @@ logging:
     com:
       vetnova: DEBUG
 
+# El secreto ya no queda hardcodeado: se lee de la variable de entorno JWT_SECRET.
+# Si la variable no existe (ej. en desarrollo local), usa el valor por defecto indicado tras ":".
+# En producción SIEMPRE se debe definir JWT_SECRET como variable de entorno real.
 jwt:
-  secret: vetnova_auth_secret_key_2026_segura_para_desarrollo
-  expiration: 3600000
+  secret: ${JWT_SECRET:vetnova_auth_secret_key_2026_segura_para_desarrollo}
+  expiration: ${JWT_EXPIRATION:3600000}
 
 notificaciones:
   url: http://localhost:8089/api/v1/notificaciones
+
+---
+# Perfil de desarrollo: se usa por defecto si no se define SPRING_PROFILES_ACTIVE
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    show-sql: true
+logging:
+  level:
+    com:
+      vetnova: DEBUG
+
+---
+# Perfil de producción: logs menos verbosos y show-sql apagado.
+# El jwt.secret y la password de la BD deben venir SIEMPRE por variable de entorno en este perfil.
+spring:
+  config:
+    activate:
+      on-profile: prod
+  jpa:
+    show-sql: false
+logging:
+  level:
+    com:
+      vetnova: INFO
+    org:
+      springframework:
+        web: WARN
