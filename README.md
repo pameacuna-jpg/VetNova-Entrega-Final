@@ -146,3 +146,4 @@ usar `Abrir_Reportes_JaCoCo.ps1` en la raíz del repositorio).
 
 [DETALLE DESPLIEGUE REMOTO: Railway / Render — completar si el equipo despliega en un entorno remoto.
  Indicar aquí las URLs públicas de cada microservicio y del Gateway una vez desplegados.]
+ 
